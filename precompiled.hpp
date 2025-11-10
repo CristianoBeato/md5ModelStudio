@@ -23,9 +23,13 @@
 #include <stdexcept>
 
 // gl matematics
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
+
+#include "crglCore.hpp"
+
+#include "Gwen/Gwen.h"
 
 #include "md5Mesh/md5Model.hpp"
 
