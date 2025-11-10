@@ -11,6 +11,31 @@ include_directories( ${CMAKE_SOURCE_DIR} )
 include_directories( ${CMAKE_SOURCE_DIR}/contrib/glm )
 include_directories( ${CMAKE_SOURCE_DIR}/contrib/crglLib )
 
+
+
+set( CRGL_SOURCE 
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglBuffer.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglContext.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglContext.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglCore.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglCore.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglFence.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglFence.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglFormat.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglFormat.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglFrameBuffer.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglFrameBuffer.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglImage.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglImage.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglPrecompiled.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglSampler.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglSampler.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglShaders.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglShaders.hpp
+    ${CMAKE_SOURCE_DIR}/contrib/crglLib/crglVertexArray.cpp
+    )
+
 set( MD5MESH_SOURCE 
     ${CMAKE_SOURCE_DIR}/md5Mesh/md5Anim.cpp
     ${CMAKE_SOURCE_DIR}/md5Mesh/md5Anim.hpp
@@ -29,6 +54,7 @@ set( MAIN_SOURCES
     )
 
 set( SOURCES
+    ${CRGL_SOURCE}
     ${MD5MESH_SOURCE}
     ${MAIN_SOURCES}
     )
