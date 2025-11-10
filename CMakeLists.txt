@@ -8,6 +8,7 @@ set( CMAKE_CXX_STANDARD 17 )
 find_package( SDL3 )
 
 include_directories( ${CMAKE_SOURCE_DIR} )
+include_directories( ${CMAKE_SOURCE_DIR}/contrib/glm )
 include_directories( ${CMAKE_SOURCE_DIR}/contrib/crglLib )
 
 set( MD5MESH_SOURCE 

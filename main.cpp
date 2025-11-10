@@ -96,16 +96,16 @@ int main( int argc, const char* argv[] )
     for (int i = 0; i < argc; i++)
     {
         const char* arg = argv[i];
-        if ( std::strncmp( argv[i], k_HELP, strlen( k_HELP ) ) == 0 )
+        if ( std::strncmp( arg, k_HELP, strlen( k_HELP ) ) == 0 )
         {
             std::cout << k_HELP_TEXT << std::endl;
             return EXIT_SUCCESS; // just print the help text
         }
-        else if ( std::strncmp( argv[i], k_NOGUI, std::strlen( k_NOGUI ) ) == 0 )
+        else if ( std::strncmp( arg, k_NOGUI, std::strlen( k_NOGUI ) ) == 0 )
         {
             gui = false;
         }
-        else if ( std::strncmp( argv[i], k_IMPORT, std::strlen( k_IMPORT ) ) == 0)
+        else if ( std::strncmp( arg, k_IMPORT, std::strlen( k_IMPORT ) ) == 0)
         {
             // missing cmd arg
             if ( ( i + 1 ) >= argc )
@@ -113,7 +113,7 @@ int main( int argc, const char* argv[] )
             
             importModel = argv[++i];
         }
-        else if ( std::strncmp( argv[i], k_EXPORT, std::strlen( k_EXPORT ) ) )
+        else if ( std::strncmp( arg, k_EXPORT, std::strlen( k_EXPORT ) ) )
         {
             // missing cmd arg
             if ( ( i + 1 ) >= argc )
@@ -121,7 +121,7 @@ int main( int argc, const char* argv[] )
             
             exportModel = argv[++i];
         }
-        else if ( std::strncmp( argv[i], k_OUTPUT, std::strlen( k_OUTPUT ) ) == 0)
+        else if ( std::strncmp( arg, k_OUTPUT, std::strlen( k_OUTPUT ) ) == 0)
         {          
             // missing cmd arg
             if ( ( i + 1 ) >= argc )
@@ -129,7 +129,7 @@ int main( int argc, const char* argv[] )
             
             saveModel = argv[++i];
         }
-        else if ( std::strncmp( argv[i], k_LOAD, std::strlen( k_LOAD ) ) == 0)
+        else if ( std::strncmp( arg, k_LOAD, std::strlen( k_LOAD ) ) == 0)
         {
           // missing cmd arg
             if ( ( i + 1 ) >= argc )
