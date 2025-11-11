@@ -8,6 +8,11 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+#include "Gwen/Renderers/OpenGL.h"
+#include "Gwen/Renderers/OpenGL_DebugFont.h"
+#include "Gwen/Skins/TexturedBase.h"
+#include "Gwen/Controls/WindowCanvas.h"
+
 static const char* k_NOGUI = "--nogui";
 static const char* k_IMPORT = "--import";
 static const char* k_EXPORT = "--export";
@@ -40,22 +45,13 @@ void crMain::Run(void)
     if ( !SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) )
         throw std::runtime_error( SDL_GetError() );
 
-    while ( running )
+    CreateUI();
+    while( !m_canvas->WantsQuit() )
     {
-        SDL_Event evt{};
-        while ( SDL_PollEvent( &evt ) )
-        {
-            switch ( evt.type )
-            {
-            case SDL_EVENT_QUIT:
-                running = false;
-                break;
-            
-            default:
-                break;
-            }
-        }
-    }   
+        m_canvas->DoThink();
+    }
+
+    DestroyUI();
 
     SDL_Quit();
 }
@@ -83,6 +79,39 @@ void crMain::Export( const std::string &in_file )
 
 void crMain::Clear(void)
 {
+}
+
+void crMain::CreateUI(void)
+{
+    // Note: Order is important here. you need to create the WindowCanvas before
+	// you setup the skin - because the renderer won't be properly set up
+	// if you try to do it before (The window canvas initializes the renderer)
+	//
+	// Create the skin and renderer
+    Gwen::Renderer::Base* renderer = new Gwen::Renderer::OpenGL_DebugFont();
+    Gwen::Skin::Base* skin = new Gwen::Skin::TexturedBase( renderer );
+
+    // The window canvas is a cross between a window and a canvas
+	// It's cool because it takes care of creating an OS specific
+	// window - so we don't have to bother with all that crap.
+    m_canvas = new Gwen::Controls::WindowCanvas( -1, -1, 700, 500, skin, "Gwen's Cross Platform Example" );
+
+    // Now it's safe to set up the skin
+#if 1
+    dynamic_cast<Gwen::Skin::TexturedBase*>(skin)->Init( "images/gwen_dark.png" );    
+#else
+    dynamic_cast<Gwen::Skin::TexturedBase*>(skin)->Init( "images/DefaultSkin.png" );
+#endif
+}
+
+void crMain::DestroyUI(void)
+{
+    if ( m_canvas )
+    {
+        delete m_canvas;
+        m_canvas = nullptr;
+    }
+    
 }
 
 int main( int argc, const char* argv[] )

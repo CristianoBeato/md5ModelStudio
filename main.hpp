@@ -6,6 +6,8 @@
 #ifndef __MAIN_HPP__
 #define __MAIN_HPP__
 
+#include "Gwen/Controls/WindowCanvas.h"
+
 class crMain
 {    
 public:
@@ -20,6 +22,10 @@ public:
     void    Clear( void );
 
 private:
+    Gwen::Controls::WindowCanvas* m_canvas;
+
+    void    CreateUI( void );
+    void    DestroyUI( void );
 };
 
 #endif //__MAIN_HPP__

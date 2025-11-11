@@ -3,8 +3,10 @@
 	Copyright (c) 2011 Facepunch Studios
 	See license in Gwen.h
 */
-#ifndef GWEN_INPUT_SDL13_H
-#define GWEN_INPUT_SDL13_H
+#ifndef GWEN_INPUT_SDL3_H
+#define GWEN_INPUT_SDL3_H
+
+#include <SDL3/SDL_events.h>
 
 #include "Gwen/InputHandler.h"
 #include "Gwen/Gwen.h"
@@ -20,13 +22,13 @@ namespace Gwen
 {
 	namespace Input
 	{
-		class SDL13
+		class SDL3
 		{
 			public:
 
-				SDL13()
+				SDL3()
 				{
-					m_Canvas = NULL;
+					m_Canvas = nullptr;
 				}
 
 				void Initialize( Gwen::Controls::Canvas* c )
@@ -40,12 +42,12 @@ namespace Gwen
 
 					switch ( Event->type )
 					{
-						case SDL_KEYUP:
-						case SDL_KEYDOWN:
+						case SDL_EVENT_KEY_UP:
+						case SDL_EVENT_KEY_DOWN:
 							{
 								SDL_KeyboardEvent* E = &Event->key;
 								int iKey = -1;
-								SDL_scancode scancode = E->keysym.scancode;
+								SDL_Scancode scancode = E->scancode;
 
 								switch ( scancode )
 								{
@@ -125,10 +127,10 @@ namespace Gwen
 										return false;
 								}
 
-								return m_Canvas->InputKey( iKey, E->state );
+								return m_Canvas->InputKey( iKey, E->down );
 							}
 
-						case SDL_TEXTINPUT:
+						case SDL_EVENT_TEXT_INPUT:
 							{
 								SDL_TextInputEvent* E = &Event->text;
 								wchar_t* widechar = ( wchar_t* ) SDL_iconv_string( UCS_STRING, "UTF-8", E->text, SDL_strlen( E->text ) + 1 );
@@ -137,14 +139,14 @@ namespace Gwen
 								return ret;
 							}
 
-						case SDL_MOUSEMOTION:
+						case SDL_EVENT_MOUSE_MOTION:
 							{
 								SDL_MouseMotionEvent* E = &Event->motion;
 								return m_Canvas->InputMouseMoved( E->x, E->y, E->xrel, E->yrel );
 							}
 
-						case SDL_MOUSEBUTTONDOWN:
-						case SDL_MOUSEBUTTONUP:
+						case SDL_EVENT_MOUSE_BUTTON_DOWN:
+						case SDL_EVENT_MOUSE_BUTTON_UP:
 							{
 								SDL_MouseButtonEvent* E = &Event->button;
 								int Button = -1;
@@ -167,10 +169,10 @@ namespace Gwen
 										return false;
 								}
 
-								return m_Canvas->InputMouseButton( Button, E->state );
+								return m_Canvas->InputMouseButton( Button, E->down );
 							}
 
-						case SDL_MOUSEWHEEL:
+						case SDL_EVENT_MOUSE_WHEEL:
 							{
 								SDL_MouseWheelEvent* E = &Event->wheel;
 								return m_Canvas->InputMouseWheel( E->y );

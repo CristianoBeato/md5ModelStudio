@@ -5,7 +5,8 @@ project( md5ModelStudio )
 ## STD 17
 set( CMAKE_CXX_STANDARD 17 )
 
-find_package( SDL3 )
+find_package( SDL3 REQUIRED )
+find_package( SDL3_image REQUIRED )
 
 include_directories( ${CMAKE_SOURCE_DIR} )
 include_directories( ${CMAKE_SOURCE_DIR}/contrib/glm )
@@ -253,5 +254,5 @@ set( SOURCES
     )
 
 add_executable( md5ModelStudio ${SOURCES} )
-target_link_libraries( md5ModelStudio PUBLIC SDL3::SDL3 )
+target_link_libraries( md5ModelStudio PUBLIC SDL3::SDL3 SDL3_image::SDL3_image )
 target_precompile_headers( md5ModelStudio PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/precompiled.hpp>" )
