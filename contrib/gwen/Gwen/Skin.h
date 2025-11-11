@@ -245,6 +245,7 @@ namespace Gwen
 				{
 					m_DefaultFont.facename = strFacename;
 					m_DefaultFont.size = fSize;
+					m_DefaultFont.Load( m_Render );
 				}
 
 			protected:
