@@ -7,6 +7,7 @@ set( CMAKE_CXX_STANDARD 17 )
 
 find_package( SDL3 REQUIRED )
 find_package( SDL3_image REQUIRED )
+find_package( SDL3_ttf REQUIRED )
 
 include_directories( ${CMAKE_SOURCE_DIR} )
 include_directories( ${CMAKE_SOURCE_DIR}/contrib/glm )
@@ -195,6 +196,8 @@ set( GWEN_SOURCE
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/FontData.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL.cpp
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL.h
+    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/RenderFont.cpp
+    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/RenderFont.hpp
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/Simple.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/TexturedBase.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/Texturing.h
@@ -250,5 +253,5 @@ set( SOURCES
     )
 
 add_executable( md5ModelStudio ${SOURCES} )
-target_link_libraries( md5ModelStudio PUBLIC SDL3::SDL3 SDL3_image::SDL3_image )
+target_link_libraries( md5ModelStudio PUBLIC SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf )
 target_precompile_headers( md5ModelStudio PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/precompiled.hpp>" )

@@ -291,8 +291,7 @@ namespace Gwen
 
 				virtual void Init( const TextObject & TextureName )
 				{
-					m_DefaultFont.facename	= L"Microsoft Sans Serif";
-					m_DefaultFont.size		= 11;
+					SetDefaultFont( L"images/Inconsolata.ttf", 14.0f );
 					m_Texture.Load( TextureName, GetRender() );
 					Colors.Window.TitleActive	= GetRender()->PixelColour( &m_Texture, 4 + 8 * 0, 508, Color( 255, 0, 0 ) );
 					Colors.Window.TitleInactive	= GetRender()->PixelColour( &m_Texture, 4 + 8 * 1, 508, Color( 255, 255, 0 ) );

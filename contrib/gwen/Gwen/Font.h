@@ -4,13 +4,13 @@
 	See license in Gwen.h
 */
 
-#pragma once
 #ifndef GWEN_FONT_H
 #define GWEN_FONT_H
 
 #include <string>
 #include <list>
 
+#include "Gwen/Gwen.h"
 #include "Gwen/BaseRender.h"
 
 namespace Gwen
@@ -22,11 +22,17 @@ namespace Gwen
 
 		Font()
 		{
-			data = NULL;
+			data = nullptr;
 			facename = L"Arial";
 			size = 10;
 			realsize = 0;
 			bold = false;
+		}
+
+		void Load( Gwen::Renderer::Base* render )
+		{
+			//Debug::AssertCheck( render != NULL, "No renderer!" );
+			render->LoadFont( this );
 		}
 
 		UnicodeString	facename;
