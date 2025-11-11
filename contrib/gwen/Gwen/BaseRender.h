@@ -50,7 +50,7 @@ namespace Gwen
 
 				virtual void SetDrawColor( Color color ) {};
 
-				virtual void DrawFilledRect( Gwen::Rect rect ) {};;
+				virtual void DrawFilledRect( Gwen::Rect rect ) {};
 
 				virtual void StartClip() {};
 				virtual void EndClip() {};

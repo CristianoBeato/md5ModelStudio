@@ -32,6 +32,8 @@ extern PFNGLENABLEPROC                                  glEnable;
 extern PFNGLFINISHPROC                                  glFinish;
 extern PFNGLFLUSHPROC                                   glFlush;
 
+extern PFNGLBLENDFUNCPROC                               glBlendFunc;
+
 extern PFNGLGETERRORPROC                                glGetError;
 extern PFNGLGETSTRINGPROC                               glGetString;
 extern PFNGLGETBOOLEANVPROC                             glGetBooleanv;
@@ -147,9 +149,11 @@ extern PFNGLVALIDATEPROGRAMPROC                         glValidateProgram;
 extern PFNGLGETPROGRAMIVPROC                            glGetProgramiv;
 extern PFNGLGETPROGRAMINFOLOGPROC                       glGetProgramInfoLog;
 extern PFNGLUSEPROGRAMPROC                              glUseProgram;
+extern PFNGLGETUNIFORMLOCATIONPROC                      glGetUniformLocation;
 extern PFNGLUNIFORM1IPROC                               glUniform1i;
 extern PFNGLUNIFORM1IVPROC                              glUniform1iv;
 extern PFNGLUNIFORM1UIVPROC                             glUniform1uiv;
+extern PFNGLUNIFORMMATRIX4FVPROC                        glUniformMatrix4fv;
 
 // pipelines
 extern PFNGLBINDPROGRAMPIPELINEPROC                     glBindProgramPipeline;
@@ -163,6 +167,7 @@ extern PFNGLACTIVESHADERPROGRAMPROC                     glActiveShaderProgram;
 extern PFNGLPROGRAMUNIFORM1IPROC                        glProgramUniform1i;
 extern PFNGLPROGRAMUNIFORM1IVPROC                       glProgramUniform1iv;
 extern PFNGLPROGRAMUNIFORM1UIVPROC                      glProgramUniform1uiv;
+extern PFNGLPROGRAMUNIFORMMATRIX4FVPROC                 glProgramUniformMatrix4fv;
 
 // buffer
 extern PFNGLISBUFFERPROC                                glIsBuffer;

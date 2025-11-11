@@ -31,6 +31,8 @@ PFNGLENABLEPROC                                 glEnable = nullptr;
 PFNGLFINISHPROC                                 glFinish = nullptr;
 PFNGLFLUSHPROC                                  glFlush = nullptr;
 
+PFNGLBLENDFUNCPROC                              glBlendFunc = nullptr;
+
 PFNGLGETERRORPROC                               glGetError = nullptr;
 PFNGLGETSTRINGPROC                              glGetString = nullptr;
 PFNGLGETBOOLEANVPROC                            glGetBooleanv = nullptr;
@@ -146,9 +148,11 @@ PFNGLVALIDATEPROGRAMPROC                        glValidateProgram = nullptr;
 PFNGLGETPROGRAMIVPROC                           glGetProgramiv = nullptr;
 PFNGLGETPROGRAMINFOLOGPROC                      glGetProgramInfoLog = nullptr;
 PFNGLUSEPROGRAMPROC                             glUseProgram = nullptr;
+PFNGLGETUNIFORMLOCATIONPROC                     glGetUniformLocation = nullptr;
 PFNGLUNIFORM1IPROC                              glUniform1i = nullptr;
 PFNGLUNIFORM1IVPROC                             glUniform1iv = nullptr;
 PFNGLUNIFORM1UIVPROC                            glUniform1uiv = nullptr;
+PFNGLUNIFORMMATRIX4FVPROC                       glUniformMatrix4fv = nullptr;
 
 // pipelines
 PFNGLBINDPROGRAMPIPELINEPROC                    glBindProgramPipeline = nullptr;
@@ -162,6 +166,7 @@ PFNGLACTIVESHADERPROGRAMPROC                    glActiveShaderProgram = nullptr;
 PFNGLPROGRAMUNIFORM1IPROC                       glProgramUniform1i = nullptr;
 PFNGLPROGRAMUNIFORM1IVPROC                      glProgramUniform1iv = nullptr;
 PFNGLPROGRAMUNIFORM1UIVPROC                     glProgramUniform1uiv = nullptr;
+PFNGLPROGRAMUNIFORMMATRIX4FVPROC                glProgramUniformMatrix4fv = nullptr;
 
 // buffer
 PFNGLISBUFFERPROC                               glIsBuffer = nullptr;
@@ -304,6 +309,8 @@ void gl::Context::LoadFunctions( void )
     glFinish = reinterpret_cast<PFNGLFINISHPROC>( GetFunctionPointer( "glFinish" ) );
     glFlush = reinterpret_cast<PFNGLFLUSHPROC>( GetFunctionPointer( "glFlush" ) );
 
+    glBlendFunc = reinterpret_cast<PFNGLBLENDFUNCPROC>( GetFunctionPointer( "glBlendFunc" ) );
+
     glGetError = reinterpret_cast<PFNGLGETERRORPROC>( GetFunctionPointer( "glGetError" ) );
     glGetString = reinterpret_cast<PFNGLGETSTRINGPROC>( GetFunctionPointer( "glGetString" ) );
     glGetBooleanv = reinterpret_cast<PFNGLGETBOOLEANVPROC>( GetFunctionPointer( "glGetBooleanv" ) );
@@ -419,9 +426,11 @@ void gl::Context::LoadFunctions( void )
     glGetProgramiv = reinterpret_cast<PFNGLGETPROGRAMIVPROC>( GetFunctionPointer( "glGetProgramiv" ) );
     glGetProgramInfoLog = reinterpret_cast<PFNGLGETPROGRAMINFOLOGPROC>( GetFunctionPointer( "glGetProgramInfoLog" ) );
     glUseProgram = reinterpret_cast<PFNGLUSEPROGRAMPROC>( GetFunctionPointer( "glUseProgram" ) );
+    glGetUniformLocation = reinterpret_cast<PFNGLGETUNIFORMLOCATIONPROC>( GetFunctionPointer( "glGetUniformLocation" ));
     glUniform1i = reinterpret_cast<PFNGLUNIFORM1IPROC>( GetFunctionPointer( "glUniform1i" ) );
     glUniform1iv = reinterpret_cast<PFNGLUNIFORM1IVPROC>( GetFunctionPointer( "glUniform1iv" ) );
     glUniform1uiv = reinterpret_cast<PFNGLUNIFORM1UIVPROC>( GetFunctionPointer( "glUniform1uiv" ) );
+    glUniformMatrix4fv = reinterpret_cast<PFNGLUNIFORMMATRIX4FVPROC>( GetFunctionPointer( "glUniformMatrix4fv" ) );
 
     // pipelines
     glBindProgramPipeline = reinterpret_cast<PFNGLBINDPROGRAMPIPELINEPROC>( GetFunctionPointer( "glBindProgramPipeline" ) );
@@ -435,6 +444,7 @@ void gl::Context::LoadFunctions( void )
     glProgramUniform1i = reinterpret_cast<PFNGLPROGRAMUNIFORM1IPROC>( GetFunctionPointer( "glProgramUniform1i" ) );
     glProgramUniform1iv = reinterpret_cast<PFNGLPROGRAMUNIFORM1IVPROC>( GetFunctionPointer( "glProgramUniform1iv" ) );
     glProgramUniform1uiv = reinterpret_cast<PFNGLPROGRAMUNIFORM1UIVPROC>( GetFunctionPointer( "glProgramUniform1uiv" ) );
+    glProgramUniformMatrix4fv =reinterpret_cast<PFNGLPROGRAMUNIFORMMATRIX4FVPROC>( GetFunctionPointer( "glProgramUniformMatrix4fv" ) );
 
     // buffer
     glIsBuffer = reinterpret_cast<PFNGLISBUFFERPROC>( GetFunctionPointer( "glIsBuffer" ) );

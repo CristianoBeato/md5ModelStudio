@@ -192,12 +192,8 @@ set( GWEN_SOURCE
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Controls/Property/Text.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Input/SDL3.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Platforms/SDL3.cpp
-#    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/DirectX11.cpp
-#    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/DirectX11.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/FontData.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL_DebugFont.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL_DebugFont.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/Simple.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/TexturedBase.h

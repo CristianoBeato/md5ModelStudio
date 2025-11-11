@@ -9,7 +9,6 @@
 #include <SDL3/SDL_main.h>
 
 #include "Gwen/Renderers/OpenGL.h"
-#include "Gwen/Renderers/OpenGL_DebugFont.h"
 #include "Gwen/Skins/TexturedBase.h"
 #include "Gwen/Controls/WindowCanvas.h"
 
@@ -88,7 +87,7 @@ void crMain::CreateUI(void)
 	// if you try to do it before (The window canvas initializes the renderer)
 	//
 	// Create the skin and renderer
-    Gwen::Renderer::Base* renderer = new Gwen::Renderer::OpenGL_DebugFont();
+    Gwen::Renderer::Base* renderer = new Gwen::Renderer::OpenGL();
     Gwen::Skin::Base* skin = new Gwen::Skin::TexturedBase( renderer );
 
     // The window canvas is a cross between a window and a canvas

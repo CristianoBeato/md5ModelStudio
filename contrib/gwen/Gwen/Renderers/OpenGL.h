@@ -7,63 +7,107 @@
 #ifndef GWEN_RENDERERS_OPENGL_H
 #define GWEN_RENDERERS_OPENGL_H
 
+#include <SDL3/SDL_video.h>
 #include "Gwen/Gwen.h"
 #include "Gwen/BaseRender.h"
+#include "glm/glm.hpp"
+#include "crglContext.hpp"
 
 namespace Gwen
 {
 	namespace Renderer
 	{
+		class SDL3Context : public gl::Context
+		{
+		public:
+			SDL3Context( void );
+			~SDL3Context( void );
+
+			virtual bool    Create( const void* in_windowHandle) override ;
+			virtual void    Destroy( void ) override;
+			virtual bool    MakeCurrent( void ) override;
+			virtual bool    Release( void ) override;
+			virtual bool    SwapBuffers( void ) override;
+			virtual void*   GetFunctionPointer( const char* in_name ) const override;
+			virtual void    DebugOuput( const char* in_message ) const override;
+
+		private:
+			SDL_Window*     m_renderWindown;
+			SDL_GLContext   m_renderContext;
+		};
 
 		class OpenGL : public Gwen::Renderer::Base
 		{
 			public:
+				OpenGL( void );
+				~OpenGL( void );
 
-				struct Vertex
-				{
-					float x, y, z;
-					float u, v;
-					unsigned char r, g, b, a;
-				};
+				virtual void Init( void );
 
-				OpenGL();
-				~OpenGL();
+				virtual void Begin( void ) override;
+				virtual void End( void ) override;
 
-				virtual void Init();
+				virtual void StartClip( void ) override;
+				virtual void EndClip( void ) override;
+				
+				virtual void SetDrawColor( Gwen::Color color ) override;
 
-				virtual void Begin();
-				virtual void End();
-
-				virtual void SetDrawColor( Gwen::Color color );
-				virtual void DrawFilledRect( Gwen::Rect rect );
-
-				void StartClip();
-				void EndClip();
-
-				void DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Rect pTargetRect, float u1 = 0.0f, float v1 = 0.0f, float u2 = 1.0f, float v2 = 1.0f );
-				void LoadTexture( Gwen::Texture* pTexture );
-				void FreeTexture( Gwen::Texture* pTexture );
-				Gwen::Color PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color & col_default );
+				//virtual void DrawShavedCornerRect( Gwen::Rect rect, bool bSlight = false );
+				virtual void DrawPixel( int x, int y ) override;
+				virtual void DrawLinedRect( Gwen::Rect rect ) override;
+				virtual void DrawFilledRect( Gwen::Rect rect ) override;
+				virtual void DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Rect pTargetRect, float u1 = 0.0f, float v1 = 0.0f, float u2 = 1.0f, float v2 = 1.0f ) override;
+				virtual void RenderText( Gwen::Font* pFont, Gwen::Point pos, const Gwen::UnicodeString & text );
+				virtual void LoadTexture( Gwen::Texture* pTexture ) override;
+				virtual void FreeTexture( Gwen::Texture* pTexture ) override;
+				Gwen::Color PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color & col_default ) override;
+				Gwen::Point MeasureText( Gwen::Font* pFont, const Gwen::UnicodeString & text );
 
 			protected:
-
-				static const int	MaxVerts = 1024;
-
-
-				void Flush();
-				void AddVert( int x, int y, float u = 0.0f , float v = 0.0f );
-
-				Gwen::Color			m_Color;
-				int					m_iVertNum;
-				Vertex				m_Vertices[ MaxVerts ];
-
+				enum drawMode_t
+				{
+					RECT_LINE,
+					RECT_FILL,
+					RECT_TEXTURED
+				};
+				
+				struct bounds_t
+				{
+					float	left = 0.0f;
+					float	top = 0.0f;
+					float	right = 0.0f;
+					float	bottom = 0.0f;
+				};
+				
+				drawMode_t			m_mode;
+				uint16_t			m_vhead;
+				uint16_t			m_vtail;
+				uint16_t			m_ihead;
+				uint16_t			m_itail;
+				GLsizei				m_width;
+				GLsizei				m_heigth;
+				float				m_fLetterSpacing;
+				float				m_fFontScale[2];
+				gl::VertexArray		m_vertexArray;
+				gl::Program			m_program;
+				gl::Buffer			m_vertexBuffer;
+				gl::Buffer			m_elementBuffer;
+				gl::Buffer			m_uniformBuffer;
+				gl::Image			m_white;
+				gl::Sampler			m_sample;
+				GLushort*			m_elements;
+				GLfloat*			m_vertexes;
+				Gwen::Texture*		m_pFontTexture;
+				
+				void	AddQuad( const bounds_t pos, const bounds_t uv );
+				void	Flush( void );
+				void	CreateDebugFont( void );
+				void	DestroyDebugFont( void );
 
 			public:
-
 				//
 				// Self Initialization
 				//
-
 				virtual bool InitializeContext( Gwen::WindowProvider* pWindow );
 				virtual bool ShutdownContext( Gwen::WindowProvider* pWindow );
 				virtual bool PresentContext( Gwen::WindowProvider* pWindow );
@@ -71,7 +115,7 @@ namespace Gwen
 				virtual bool BeginContext( Gwen::WindowProvider* pWindow );
 				virtual bool EndContext( Gwen::WindowProvider* pWindow );
 
-				void*	m_pContext;
+				gl::Context*	m_pContext;
 		};
 
 	}
