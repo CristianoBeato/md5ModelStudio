@@ -8,9 +8,17 @@
 
 #include <math.h>
 #include <SDL3_image/SDL_image.h>
+
 #include "OpenGL.h"
 
-constexpr uint32_t k_MAX_ELEMENTS_COUNT = 8 * 1024;
+#define DISABLE_SCISSOR 1
+#define USE_SDL_TTF 1
+
+#include "RenderFont.hpp"
+
+constexpr uint32_t k_QUAD_VERTEX_COUNT = 4;
+constexpr uint32_t k_QUAD_INDEX_COUNT  = 6;
+constexpr uint32_t k_MAX_ELEMENTS_COUNT = 16 * 1024;
 constexpr uint32_t k_MAX_VERTICES_COUNT = k_MAX_ELEMENTS_COUNT * 4;
 constexpr size_t   k_VERTEX_SIZE = sizeof( float ) * 4;
 
@@ -127,7 +135,6 @@ Gwen::Renderer::OpenGL::OpenGL( void ) :
 	m_itail( 0 ),
 	m_elements( nullptr ),
 	m_vertexes( nullptr  ),
-	m_pFontTexture( nullptr ),
 	m_pContext( nullptr )
 {
 	m_fLetterSpacing = 1.0f / 16.0f;
@@ -157,6 +164,8 @@ void Gwen::Renderer::OpenGL::Begin( void )
 
 	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 	glEnable( GL_BLEND );
+	glDisable( GL_DEPTH_TEST );
+	//glEnable( GL_RASTERIZER_DISCARD );
 }
 
 void Gwen::Renderer::OpenGL::End( void )
@@ -180,17 +189,21 @@ void Gwen::Renderer::OpenGL::SetDrawColor( Gwen::Color color )
 void Gwen::Renderer::OpenGL::StartClip( void )
 {
 	Flush();
+#if !DISABLE_SCISSOR
 	Gwen::Rect rect = ClipRegion();
 	rect.y = m_heigth - ( rect.y + rect.h );
-
+	
 	glScissor( rect.x * Scale(), rect.y * Scale(), rect.w * Scale(), rect.h * Scale() );
 	glEnable( GL_SCISSOR_TEST );
+#endif
 };
 
 void Gwen::Renderer::OpenGL::EndClip( void )
 {
 	Flush();
-	glDisable( GL_SCISSOR_TEST );
+#if !DISABLE_SCISSOR
+ 	glDisable( GL_SCISSOR_TEST );
+#endif
 };
 
 void Gwen::Renderer::OpenGL::DrawPixel(int x, int y)
@@ -272,22 +285,21 @@ void Gwen::Renderer::OpenGL::DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Re
 	if ( m_mode != RECT_TEXTURED )
 	{
 		Flush();
-		GLuint white = *tex;
+		GLuint texture = *tex;
 		GLuint sample = m_sample;
-		m_pContext->BindTextures( &white, &sample, 0, 1 );
+		m_pContext->BindTextures( &texture, &sample, 0, 1 );
 		m_mode = RECT_TEXTURED;
 	}
 	else
 	{
 		auto state = m_pContext->CurrentState();
-
 		if ( state.textures.textures[0] == *tex )
 		{
 			Flush();
 
-			GLuint white = *tex;
+			GLuint texture = *tex;
 			GLuint sample = m_sample;
-			m_pContext->BindTextures( &white, &sample, 0, 1 );
+			m_pContext->BindTextures( &texture, &sample, 0, 1 );
 		}
 	}
 
@@ -312,46 +324,90 @@ void Gwen::Renderer::OpenGL::DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Re
 
 void Gwen::Renderer::OpenGL::RenderText(Gwen::Font *pFont, Gwen::Point pos, const Gwen::UnicodeString &text)
 {
-	float fSize = pFont->size * Scale();
+	int offset = 0;
+	if ( !pFont || !pFont->data )
+		return;
 
 	if ( !text.length() )
 		return;
-
-	Gwen::String converted_string = Gwen::Utility::UnicodeToString( text );
-	float yOffset = 0.0f;
-
-	for ( int i = 0; i < text.length(); i++ )
+	
+	renderFont_t* font = static_cast<renderFont_t*>( pFont->data );
+	if ( m_mode != RECT_FONT )
 	{
-		char ch = converted_string[i];
-		float curSpacing = sGwenDebugFontSpacing[ch] * m_fLetterSpacing * fSize * m_fFontScale[0];
-		Gwen::Rect r( pos.x + yOffset, pos.y - fSize * 0.5, ( fSize * m_fFontScale[0] ), fSize * m_fFontScale[1] );
-
-		if ( m_pFontTexture )
+		GLuint texture = font->texture;
+		GLuint sample = m_sample;
+		m_pContext->BindTextures( &texture, &sample, 0, 1 );
+		m_mode = RECT_FONT;
+	}
+	else
+	{
+		auto state = m_pContext->CurrentState();
+		if ( state.textures.textures[0] == font->texture )
 		{
-			float uv_texcoords[8] = {0., 0., 1., 1.};
+			Flush();
 
-			if ( ch >= 0 )
-			{
-				float cx = ( ch % 16 ) / 16.0;
-				float cy = ( ch / 16 ) / 16.0;
-				uv_texcoords[0] = cx;
-				uv_texcoords[1] = cy;
-				uv_texcoords[4] = float( cx + 1.0f / 16.0f );
-				uv_texcoords[5] = float( cy + 1.0f / 16.0f );
-			}
+			GLuint texture = font->texture;
+			GLuint sample = m_sample;
+			m_pContext->BindTextures( &texture, &sample, 0, 1 );
+		}
+	}
 
-			DrawTexturedRect( m_pFontTexture, r, uv_texcoords[0], uv_texcoords[5], uv_texcoords[4], uv_texcoords[1] );
-			yOffset += curSpacing;
-			}
-			else
-			{
-				DrawFilledRect( r );
-				yOffset += curSpacing;
-			}
+	for( wchar_t ch : text )
+	{
+		glyph_t g{};
+		Gwen::Rect rect{};
+
+		if ( ch < 0 || ch > 255 )
+			ch = ' '; // ingnore caracter		
+
+		g = font->glyphs[ch];
+        
+		rect.w = g.w;
+        rect.h = g.h;
+
+		// posição de cada vértice
+		rect.x = ( pos.x + offset + g.bearingX );
+		rect.y = ( pos.y + g.bearingY );
+		 
+		Translate( rect );
+
+		AddQuad( { (float)rect.x, (float)rect.y, (float)rect.x + rect.w, (float)rect.y + rect.h }, { g.u0, g.v0, g.u1, g.v1 } );
+
+		// avança pro próximo caractere
+        offset += g.advance;
 	}
 }
 
-void Gwen::Renderer::OpenGL::LoadTexture( Gwen::Texture* pTexture )
+void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
+{
+	if ( !pFont || pFont->facename.empty() )
+		return;
+
+	Gwen::String fontname = Gwen::Utility::UnicodeToString( pFont->facename );
+#if USE_SDL_TTF
+	FontLoader loader( fontname.c_str(), pFont->size );
+	if ( !loader.IsOpen() )
+		return;
+
+	pFont->data = std::malloc( sizeof( renderFont_t ) );
+	static_cast<renderFont_t*>( pFont->data )->texture = gl::Image();
+	loader.GetRenderFont( static_cast<renderFont_t*>( pFont->data ) );
+#endif
+}
+
+void Gwen::Renderer::OpenGL::FreeFont(Gwen::Font *pFont)
+{
+	if ( !pFont || pFont->data == nullptr )
+		return;
+
+#if USE_SDL_TTF
+	static_cast<renderFont_t*>( pFont->data )->texture.Destroy();
+	std::free( pFont->data );
+	pFont->data = nullptr;
+#endif
+}
+
+void Gwen::Renderer::OpenGL::LoadTexture(Gwen::Texture *pTexture)
 {
 	GLenum internalFormat = 0;
 	gl::Image::dimensions_t	dim{};
@@ -501,13 +557,11 @@ Gwen::Point Gwen::Renderer::OpenGL::MeasureText(Gwen::Font *pFont, const Gwen::U
 
 void Gwen::Renderer::OpenGL::AddQuad(const bounds_t pos, const bounds_t uv)
 {
-	if ( ( ( m_vhead + 4 ) > k_MAX_VERTICES_COUNT  ) || ( m_ihead + 6 ) > k_MAX_ELEMENTS_COUNT )
+	if ( ( m_vhead + 4) > k_MAX_VERTICES_COUNT || ( m_ihead + 6 ) > k_MAX_ELEMENTS_COUNT )
 	{
 		Flush();
-		m_ihead = 0;
-		m_itail = 0;
-		m_vhead = 0;
-		m_vtail = 0;
+		m_ihead = m_itail = 0;
+		m_vhead = m_vtail = 0;
 	}
 
 	// TL ____ TR
@@ -521,69 +575,61 @@ void Gwen::Renderer::OpenGL::AddQuad(const bounds_t pos, const bounds_t uv)
 		pos.left, pos.top, uv.left, uv.top,			// 0 TL
 		pos.right, pos.top, uv.right, uv.top,		// 1 TR
 		pos.left, pos.bottom, uv.left, uv.bottom,	// 2 BL
-		pos.right, pos.bottom, uv.right, uv.bottom,	// 3 BR
+		pos.right, pos.bottom, uv.right, uv.bottom,	// 3 B   R
 	};
 
+	// copy vertexes to vertex buffer array 
+	uint16_t baseVertex = m_vhead - m_vtail; 
 	const uint16_t indexes[6]
 	{
 		// T1
-		( m_vhead - m_vtail ) + 0, // TL
-		( m_vhead - m_vtail ) + 1, // TR
-		( m_vhead - m_vtail ) + 2, // BL
+		baseVertex + 0, // TL
+		baseVertex + 1, // TR
+		baseVertex + 2, // BL
 		// T2
-		( m_vhead - m_vtail ) + 1, // TR
-		( m_vhead - m_vtail ) + 2, // BL
-		( m_vhead - m_vtail ) + 3, // BR
+		baseVertex + 1, // TR
+		baseVertex + 2, // BL
+		baseVertex + 3, // BR
 	};
 
-	// copy vertexes and indices to buffer
-	std::memcpy( m_vertexes + ( m_vhead * 4 ), vertexes, k_VERTEX_SIZE * 4 );
-	std::memcpy( m_elements + m_itail, indexes, sizeof(uint16_t) * 6 );
+	// upload to buffers 
+	std::memcpy( &m_vertexes[m_vhead * 4], vertexes, k_VERTEX_SIZE * 4);
+	std::memcpy( &m_elements[m_ihead], indexes, sizeof(uint16_t) * 6 );
 
-	// move 
+	// move position on buffer
 	m_vhead += 4;
 	m_ihead += 6;
 }
 
 void Gwen::Renderer::OpenGL::Flush( void )
 {
-	if ( m_itail == m_ihead )
+	if ( !( m_ihead > m_itail ) )
 		return;
 	
-	size_t offset = sizeof( GLushort ) * m_itail;
-	GLenum drawMode = m_mode == RECT_LINE ? GL_LINE_LOOP : GL_TRIANGLES;
-	glDrawElementsBaseVertex( drawMode, m_ihead - m_itail, GL_UNSIGNED_SHORT, reinterpret_cast<void*>( sizeof( GLushort ) * m_itail ), m_vtail );
+	if ( m_mode == RECT_LINE )
+		glDrawArrays( GL_LINE_LOOP, m_vtail, m_vhead - m_vtail );
+	else
+		glDrawElementsBaseVertex( GL_TRIANGLES, m_ihead - m_itail, GL_UNSIGNED_SHORT, reinterpret_cast<void*>( sizeof( GLushort ) * m_itail ), m_vtail );
 
 	m_itail = m_ihead;
 	m_vtail = m_vhead;
-	glFlush();
 }
 
 void Gwen::Renderer::OpenGL::CreateDebugFont(void)
 {
-	if ( m_pFontTexture )
+#if !USE_SDL_TTF
+	gl::Image::dimensions_t dim{};
+	if ( m_fontImage )
 		return;
 
-	m_pFontTexture = new Gwen::Texture();
-	
-	// Create a little texture pointer..
-	gl::Image* pglTexture = new gl::Image();
-	
-	// Sort out our GWEN texture
-	m_pFontTexture->data = pglTexture;
-	m_pFontTexture->width = 256;
-	m_pFontTexture->height = 256;
-
 	// Create the opengl texture
-	gl::Image::dimensions_t dim{};
 	dim.width = 256;
 	dim.height = 256;
 	dim.depth = 0;
 
-	pglTexture->Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, dim );
+	m_fontImage.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, dim );
 			
 	unsigned char* texdata = new unsigned char[256 * 256 * 4];
-
 	for ( int i = 0; i < 256 * 256; i++ )
 	{
 		texdata[i * 4] = sGwenFontData[i];
@@ -592,25 +638,19 @@ void Gwen::Renderer::OpenGL::CreateDebugFont(void)
 		texdata[i * 4 + 3] = sGwenFontData[i];
 	}
 
-	pglTexture->SubImage( 0, { 0, 0, 0}, { 256, 256, 0 }, texdata, false );
-
+	m_fontImage.SubImage( 0, { 0, 0, 0}, { 256, 256, 0 }, texdata, false );
 	delete[]texdata;
+#endif
 }
 
 void Gwen::Renderer::OpenGL::DestroyDebugFont(void)
 {
-	if ( !m_pFontTexture )
+#if !USE_SDL_TTF
+	if ( !m_fontImage )
 			return;
 
-	gl::Image* tex = static_cast<gl::Image*>( m_pFontTexture->data );
-	if ( !tex )
-		return;
-
-	tex->Destroy();
-	delete tex;
-	m_pFontTexture->data = nullptr;
-	delete m_pFontTexture;
-	m_pFontTexture = nullptr;
+	m_fontImage.Destroy();
+#endif
 }
 
 bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
@@ -626,6 +666,11 @@ bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
 
 	m_pContext = new SDL3Context();
 	m_pContext->Create( pWindow->GetWindow() );
+
+#if USE_SDL_TTF
+	if( !TTF_Init() )
+		return false;
+#endif
 
 	SDL_GetWindowSizeInPixels( static_cast<SDL_Window*>( pWindow->GetWindow() ), &w, &h );
 
@@ -752,6 +797,10 @@ bool Gwen::Renderer::OpenGL::ShutdownContext( Gwen::WindowProvider* pWindow )
 	
 	if( m_vertexArray )
 		m_vertexArray.Destroy();
+
+#if USE_SDL_TTF
+	TTF_Quit();
+#endif 
 
 	if( m_pContext )
 	{

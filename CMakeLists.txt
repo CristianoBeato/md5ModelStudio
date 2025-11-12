@@ -252,6 +252,10 @@ set( SOURCES
     ${MAIN_SOURCES}
     )
 
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang" )
+	add_definitions(-Wnarrowing)
+endif()
+
 add_executable( md5ModelStudio ${SOURCES} )
 target_link_libraries( md5ModelStudio PUBLIC SDL3::SDL3 SDL3_image::SDL3_image SDL3_ttf::SDL3_ttf )
 target_precompile_headers( md5ModelStudio PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/precompiled.hpp>" )

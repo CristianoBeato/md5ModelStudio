@@ -58,6 +58,8 @@ namespace Gwen
 				virtual void DrawFilledRect( Gwen::Rect rect ) override;
 				virtual void DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Rect pTargetRect, float u1 = 0.0f, float v1 = 0.0f, float u2 = 1.0f, float v2 = 1.0f ) override;
 				virtual void RenderText( Gwen::Font* pFont, Gwen::Point pos, const Gwen::UnicodeString & text );
+				virtual void LoadFont( Gwen::Font* pFont ) override;
+				virtual void FreeFont( Gwen::Font* pFont ) override;
 				virtual void LoadTexture( Gwen::Texture* pTexture ) override;
 				virtual void FreeTexture( Gwen::Texture* pTexture ) override;
 				Gwen::Color PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color & col_default ) override;
@@ -68,7 +70,8 @@ namespace Gwen
 				{
 					RECT_LINE,
 					RECT_FILL,
-					RECT_TEXTURED
+					RECT_TEXTURED,
+					RECT_FONT
 				};
 				
 				struct bounds_t
@@ -94,10 +97,10 @@ namespace Gwen
 				gl::Buffer			m_elementBuffer;
 				gl::Buffer			m_uniformBuffer;
 				gl::Image			m_white;
+				gl::Image			m_fontImage;				
 				gl::Sampler			m_sample;
 				GLushort*			m_elements;
 				GLfloat*			m_vertexes;
-				Gwen::Texture*		m_pFontTexture;
 				
 				void	AddQuad( const bounds_t pos, const bounds_t uv );
 				void	Flush( void );

@@ -93,10 +93,10 @@ void crMain::CreateUI(void)
     // The window canvas is a cross between a window and a canvas
 	// It's cool because it takes care of creating an OS specific
 	// window - so we don't have to bother with all that crap.
-    m_canvas = new Gwen::Controls::WindowCanvas( -1, -1, 700, 500, skin, "md5ModelStudio" );
+    m_canvas = new Gwen::Controls::WindowCanvas( -1, -1, 800, 600, skin, "md5ModelStudio" );
 
     // Now it's safe to set up the skin
-#if 0
+#if 1
     dynamic_cast<Gwen::Skin::TexturedBase*>(skin)->Init( "images/gwen_dark.png" );    
 #else
     dynamic_cast<Gwen::Skin::TexturedBase*>(skin)->Init( "images/DefaultSkin.png" );
