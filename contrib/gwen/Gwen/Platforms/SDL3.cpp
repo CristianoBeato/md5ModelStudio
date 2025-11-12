@@ -144,7 +144,7 @@ bool Gwen::Platform::FolderOpen( const String & Name, const String & StartPath, 
 void* Gwen::Platform::CreatePlatformWindow( int x, int y, int w, int h, const Gwen::String & strWindowTitle )
 {
 	// create a OpenGL capable window
-	SDL_Window* window = SDL_CreateWindow( strWindowTitle.c_str(), w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS );
+	SDL_Window* window = SDL_CreateWindow( strWindowTitle.c_str(), w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_BORDERLESS );
 	return reinterpret_cast<void*>( window );
 }
 
@@ -194,10 +194,14 @@ void Gwen::Platform::SetWindowMaximized( void* pPtr, bool bMax, Gwen::Point & pN
 	if ( bMax )
 		SDL_MaximizeWindow( window );
 	else
-	{
-		SDL_SetWindowPosition( window, pNewPos.x, pNewPos.y );
-		SDL_SetWindowSize( window, pNewSize.x, pNewSize.y );	
-	}
+		SDL_RestoreWindow( window );
+
+	// Wait for window to update
+	SDL_SyncWindow( window );
+
+	// Get new bound 
+	SDL_GetWindowPosition( window, &pNewPos.x, &pNewPos.y );
+	SDL_GetWindowSize( window, &pNewSize.x, &pNewSize.y );	
 }
 
 void Gwen::Platform::SetWindowMinimized( void* pPtr, bool bMinimized )

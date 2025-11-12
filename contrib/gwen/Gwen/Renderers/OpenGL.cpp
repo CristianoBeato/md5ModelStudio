@@ -8,19 +8,37 @@
 
 #include <math.h>
 #include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include "OpenGL.h"
 
-#define DISABLE_SCISSOR 1
+#define DISABLE_SCISSOR 0
 #define USE_SDL_TTF 1
-
-#include "RenderFont.hpp"
 
 constexpr uint32_t k_QUAD_VERTEX_COUNT = 4;
 constexpr uint32_t k_QUAD_INDEX_COUNT  = 6;
 constexpr uint32_t k_MAX_ELEMENTS_COUNT = 16 * 1024;
 constexpr uint32_t k_MAX_VERTICES_COUNT = k_MAX_ELEMENTS_COUNT * 4;
 constexpr size_t   k_VERTEX_SIZE = sizeof( float ) * 4;
+
+struct glyph_t 
+{
+    float u0 = 0.0f;
+    float v0 = 0.0f;
+    float u1 = 0.0f;
+    float v1 = 0.0f;
+    int w = 0;
+    int h = 0;
+    int advance = 0;
+    int bearingX = 0; 
+    int bearingY = 0;
+};
+
+struct  renderFont_t
+{
+    gl::Image   texture;
+    glyph_t     glyphs[256];
+};
 
 static int ReadShaderSource( const char* path, char** source )
 {
@@ -293,7 +311,7 @@ void Gwen::Renderer::OpenGL::DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Re
 	else
 	{
 		auto state = m_pContext->CurrentState();
-		if ( state.textures.textures[0] == *tex )
+		if ( state.textures.textures[0] != *tex )
 		{
 			Flush();
 
@@ -330,6 +348,8 @@ void Gwen::Renderer::OpenGL::RenderText(Gwen::Font *pFont, Gwen::Point pos, cons
 
 	if ( !text.length() )
 		return;
+
+	Translate( pos.x, pos.y );
 	
 	renderFont_t* font = static_cast<renderFont_t*>( pFont->data );
 	if ( m_mode != RECT_FONT )
@@ -342,10 +362,9 @@ void Gwen::Renderer::OpenGL::RenderText(Gwen::Font *pFont, Gwen::Point pos, cons
 	else
 	{
 		auto state = m_pContext->CurrentState();
-		if ( state.textures.textures[0] == font->texture )
+		if ( state.textures.textures[0] != font->texture )
 		{
 			Flush();
-
 			GLuint texture = font->texture;
 			GLuint sample = m_sample;
 			m_pContext->BindTextures( &texture, &sample, 0, 1 );
@@ -355,23 +374,19 @@ void Gwen::Renderer::OpenGL::RenderText(Gwen::Font *pFont, Gwen::Point pos, cons
 	for( wchar_t ch : text )
 	{
 		glyph_t g{};
-		Gwen::Rect rect{};
-
+	
 		if ( ch < 0 || ch > 255 )
-			ch = ' '; // ingnore caracter		
-
-		g = font->glyphs[ch];
-        
-		rect.w = g.w;
-        rect.h = g.h;
+			g = font->glyphs[' '];
+		else
+			g = font->glyphs[ch];
 
 		// posição de cada vértice
-		rect.x = ( pos.x + offset + g.bearingX );
-		rect.y = ( pos.y + g.bearingY );
-		 
-		Translate( rect );
+		float rx0 = pos.x + offset + g.bearingX;
+		float ry0 = pos.y + g.bearingY;
+		float rx1 = rx0 + g.w;
+		float ry1 = ry0 + g.h;
 
-		AddQuad( { (float)rect.x, (float)rect.y, (float)rect.x + rect.w, (float)rect.y + rect.h }, { g.u0, g.v0, g.u1, g.v1 } );
+		AddQuad( { rx0, ry0, rx1 , ry1 }, { g.u0, g.v0, g.u1, g.v1 } );
 
 		// avança pro próximo caractere
         offset += g.advance;
@@ -385,13 +400,97 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
 
 	Gwen::String fontname = Gwen::Utility::UnicodeToString( pFont->facename );
 #if USE_SDL_TTF
-	FontLoader loader( fontname.c_str(), pFont->size );
-	if ( !loader.IsOpen() )
-		return;
+	TTF_Font*       font = nullptr;
+    SDL_Surface*    atlas = nullptr;
+    glyph_t         glyphs[256]{};
+
+	font = TTF_OpenFont( fontname.c_str(), pFont->size );
+	if ( !font )
+	{
+		pFont->data = nullptr;
+        return;
+	}
+
+    /// create a gliph attlas surface
+    atlas = SDL_CreateSurface( 512, 512, SDL_PIXELFORMAT_RGBA32 );
+    if( !atlas )
+	{
+		pFont->data = nullptr;
+		TTF_CloseFont( font );
+        return;
+	}
+
+    // create a white transparent background
+    SDL_PixelFormatDetails formatDetails{};
+    formatDetails.format = SDL_PIXELFORMAT_RGBA32;
+    SDL_FillSurfaceRect( atlas, nullptr, SDL_MapRGBA( &formatDetails, nullptr, 255, 255, 255, 0 ) );
+
+    int x = 0, y = 0, rowHeight = 0;
+
+    for ( int ch = 0; ch < 256; ++ch ) 
+    {
+
+        SDL_Surface* glyphSurface = nullptr;
+#if 0
+        glyphSurface = TTF_RenderGlyph_Blended( font, ch, { 255, 255, 255, 255 });
+#else
+        glyphSurface = TTF_RenderGlyph_Solid( font, ch, { 255, 255, 255, 255 } );
+#endif 
+        if (!glyphSurface) 
+            continue;
+
+        if (x + glyphSurface->w >= 512 ) 
+        {
+            x = 0;
+            y += rowHeight + 1;
+            rowHeight = 0;
+        }
+
+        SDL_Rect dst = { x, y, glyphSurface->w, glyphSurface->h };
+        SDL_BlitSurface( glyphSurface, nullptr, atlas, &dst);
+
+        rowHeight = std::max(rowHeight, glyphSurface->h);
+
+        glyph_t& g = glyphs[ch];
+        g.u0 = float(x) / 512;
+        g.v0 = float(y) / 512;
+        g.u1 = float(x + glyphSurface->w) / 512;
+        g.v1 = float(y + glyphSurface->h) / 512;
+        g.w = glyphSurface->w;
+        g.h = glyphSurface->h;
+
+        TTF_GetGlyphMetrics( font, ch, &g.bearingX, nullptr, &g.bearingY, nullptr, &g.advance );
+
+        x += glyphSurface->w + 1;
+        SDL_DestroySurface( glyphSurface );
+    }
+
+#if 0 // just to help degub
+    IMG_SavePNG( m_atlas, "font_data.png" );
+#endif
 
 	pFont->data = std::malloc( sizeof( renderFont_t ) );
+
+	// create and upload texture
 	static_cast<renderFont_t*>( pFont->data )->texture = gl::Image();
-	loader.GetRenderFont( static_cast<renderFont_t*>( pFont->data ) );
+	static_cast<renderFont_t*>( pFont->data )->texture.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, { 512, 512, 0 });
+	static_cast<renderFont_t*>( pFont->data )->texture.SubImage( 0, { 0, 0, 0 }, { 512, 512, 0}, atlas->pixels );
+
+	// copy the glyphs
+    std::memcpy( static_cast<renderFont_t*>( pFont->data )->glyphs, glyphs, sizeof( glyph_t ) * 256 );
+
+    if ( atlas )
+    {
+        SDL_DestroySurface( atlas );
+        atlas = nullptr;
+    }
+
+    if ( font != nullptr )
+    {
+        TTF_CloseFont( font );
+        font = nullptr;
+    }
+
 #endif
 }
 
@@ -539,19 +638,30 @@ Gwen::Color Gwen::Renderer::OpenGL::PixelColour( Gwen::Texture* pTexture, unsign
 
 Gwen::Point Gwen::Renderer::OpenGL::MeasureText(Gwen::Font *pFont, const Gwen::UnicodeString &text)
 {
-	Gwen::Point p;
-	float fSize = pFont->size * Scale();
-	Gwen::String converted_string = Gwen::Utility::UnicodeToString( text );
-	float spacing = 0.0f;
+	Gwen::Point p{ 0, 0 };
 
-	for ( int i = 0; i < text.length(); i++ )
+	if ( !pFont || !pFont->data )
+		return Gwen::Point( 0, 0 );
+
+	if ( !text.length() )
+		return Gwen::Point( 0, 0 );
+
+	renderFont_t* font = static_cast<renderFont_t*>( pFont->data );
+	for ( wchar_t ch : text )
 	{
-		char ch = converted_string[i];
-		spacing += sGwenDebugFontSpacing[ch];
+		glyph_t g{};
+	
+		if ( ch < 0 || ch > 255 )
+			g = font->glyphs[' '];
+		else
+			g = font->glyphs[ch];
+
+		if( p.y < g.h )
+			p.y = g.h;
+
+		p.x += g.advance; 
 	}
 
-	p.x = spacing * m_fLetterSpacing * fSize * m_fFontScale[0];
-	p.y = pFont->size * Scale();
 	return p;
 }
 

@@ -196,8 +196,6 @@ set( GWEN_SOURCE
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/FontData.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL.cpp
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/OpenGL.h
-    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/RenderFont.cpp
-    ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Renderers/RenderFont.hpp
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/Simple.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/TexturedBase.h
     ${CMAKE_SOURCE_DIR}/contrib/gwen/Gwen/Skins/Texturing.h
