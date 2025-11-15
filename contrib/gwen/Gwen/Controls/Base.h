@@ -164,7 +164,7 @@ namespace Gwen
 
 			public:
 
-				virtual const Gwen::Rect & GetRenderBounds() const { return m_RenderBounds; }
+				virtual const Gwen::Rect & GetRenderBounds( void ) const { return m_RenderBounds; }
 
 			protected:
 

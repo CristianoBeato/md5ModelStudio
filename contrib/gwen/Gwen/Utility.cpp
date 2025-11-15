@@ -4,10 +4,8 @@
 	See license in Gwen.h
 */
 
-#include "Gwen/ToolTip.h"
+#include "Gwen/Precompiled.h"
 #include "Gwen/Utility.h"
-
-#include <cstdio>
 
 using namespace Gwen;
 
@@ -40,7 +38,7 @@ UnicodeString Gwen::Utility::Format( const wchar_t* fmt, ... )
 		FILE* fnull = fopen( GWEN_FNULL, "wb" );
 		va_list c;
 		va_copy( c, s );
-		len = vfwprintf( fnull, fmt, c );
+		len = std::vfwprintf( fnull, fmt, c );
 		va_end( c );
 		fclose( fnull );
 	} 
@@ -52,7 +50,7 @@ UnicodeString Gwen::Utility::Format( const wchar_t* fmt, ... )
 		strOut.resize( len + 1 );
 		va_list c;
 		va_copy( c, s );
-		len = vswprintf( &strOut[0], strOut.size(), fmt, c );
+		len = std::vswprintf( &strOut[0], strOut.size(), fmt, c );
 		va_end( c );
 		strOut.resize( len );
 	}

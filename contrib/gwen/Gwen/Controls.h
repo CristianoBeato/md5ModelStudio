@@ -8,6 +8,11 @@
 #include "Gwen/Controls/FolderPicker.h"
 #include "Gwen/Controls/FilePicker.h"
 #include "Gwen/Controls/GroupBox.h"
+
+// BEATO Begin:
+#include "Gwen/Controls/DrawPanel.h"
+// BEATO End
+
 #include "Gwen/Controls/ImagePanel.h"
 #include "Gwen/Controls/ListBox.h"
 #include "Gwen/Controls/PropertyTree.h"

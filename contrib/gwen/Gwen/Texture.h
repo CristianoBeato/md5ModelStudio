@@ -4,11 +4,8 @@
 	See license in Gwen.h
 */
 
-#pragma once
 #ifndef GWEN_TEXTURE_H
 #define GWEN_TEXTURE_H
-
-#include <string>
 
 #include "Gwen/BaseRender.h"
 
@@ -42,7 +39,7 @@ namespace Gwen
 		void Load( const TextObject & str, Gwen::Renderer::Base* render )
 		{
 			name = str;
-			Gwen::Debug::AssertCheck( render != NULL, "No renderer!" );
+			Gwen::Debug::AssertCheck( render != nullptr, "No renderer!" );
 			render->LoadTexture( this );
 		}
 

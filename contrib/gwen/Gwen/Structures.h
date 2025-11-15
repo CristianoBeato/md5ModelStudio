@@ -4,16 +4,13 @@
 	See license in Gwen.h
 */
 
-#pragma once
 #ifdef _MSC_VER
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4251 )
 #endif
+
 #ifndef GWEN_STRUCTURES_H
 #define GWEN_STRUCTURES_H
-
-#include "Gwen/Exports.h"
-#include <string>
 
 namespace Gwen
 {
@@ -21,6 +18,11 @@ namespace Gwen
 	{
 		class Base;
 		class Canvas;
+	}
+
+	namespace Renderer
+	{
+		class Base;
 	}
 
 	namespace CursorType
@@ -224,9 +226,9 @@ namespace Gwen
 		{
 			Package()
 			{
-				userdata = NULL;
+				userdata = nullptr;
 				draggable = false;
-				drawcontrol = NULL;
+				drawcontrol = nullptr;
 				holdoffset = Gwen::Point( 0, 0 );
 			}
 

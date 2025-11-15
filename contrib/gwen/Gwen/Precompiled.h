@@ -2,6 +2,7 @@
 	GWEN
 
 	Copyright (c) 2010 Facepunch Studios
+	Copyright (c) 2025 Cristiano B. Santos
 
 	MIT License
 
@@ -24,8 +25,19 @@
 	THE SOFTWARE.
 */
 
-#ifndef GWEN_GWEN_H
-#define GWEN_GWEN_H
+#ifndef __PRECOMPILED_H__
+#define __PRECOMPILED_H__
+
+#include <memory.h>
+#include <string>
+#include <cstdlib>
+#include <cstdarg>
+#include <cstdio>
+#include <cmath>
+#include <cstring>
+#include <set>
+#include <list>
+#include <algorithm>
 
 #include "Gwen/Macros.h"
 #include "Gwen/Config.h"
@@ -34,48 +46,14 @@
 #include "Gwen/Skin.h"
 #include "Gwen/Controls/Base.h"
 #include "Gwen/Controls/Canvas.h"
+#include "Gwen/Exports.h"
 #include "Gwen/Align.h"
+#include "Gwen/Texture.h"
+#include "Gwen/Font.h"
+#include "Gwen/FrameBuffer.h"
+#include "Gwen/BaseRender.h"
+#include "Gwen/ToolTip.h"
+#include "Gwen/Utility.h"
+#include "Gwen/Gwen.h"
 
-// Enable the hook system (se Hook.h)
-#define GWEN_HOOKSYSTEM
-
-namespace Gwen
-{
-	namespace Debug
-	{
-		void GWEN_EXPORT Msg( const wchar_t* str, ... );
-		void GWEN_EXPORT Msg( const char* str, ... );
-		void GWEN_EXPORT AssertCheck( bool b, const char* strMsg );
-	}
-
-	namespace Colors
-	{
-		static const Color Black( 0, 0, 0, 255 );
-		static const Color Red( 255, 0, 0, 255 );
-		static const Color Yellow( 255, 255, 0, 255 );
-		static const Color White( 255, 255, 255, 255 );
-		static const Color Blue( 0, 0, 255, 255 );
-		static const Color Green( 0, 255, 0, 255 );
-		static const Color Grey( 200, 200, 200, 255 );
-		static const Color GreyLight( 230, 230, 230, 255 );
-		static const Color GwenPink( 255, 65, 199, 255 );
-
-
-	};
-
-	extern GWEN_EXPORT Controls::Base*	HoveredControl;
-	extern GWEN_EXPORT Controls::Base*	KeyboardFocus;
-	extern GWEN_EXPORT Controls::Base*	MouseFocus;
-
-	namespace Input
-	{
-		inline void Blur()
-		{
-			if ( KeyboardFocus )
-			{ KeyboardFocus->Blur(); }
-		}
-	}
-
-} //namespace Gwen
-
-#endif
+#endif //!__PRECOMPILED_H__
