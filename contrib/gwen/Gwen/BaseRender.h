@@ -4,7 +4,6 @@
 	See license in Gwen.h
 */
 
-#pragma once
 #ifndef GWEN_BASERENDER_H
 #define GWEN_BASERENDER_H
 
@@ -14,6 +13,7 @@ namespace Gwen
 {
 	struct Font;
 	struct Texture;
+	struct FrameBuffer;
 	class WindowProvider;
 
 	namespace Renderer
@@ -23,10 +23,9 @@ namespace Gwen
 		class ICacheToTexture
 		{
 			public:
-
-				virtual ~ICacheToTexture() {}
-				virtual void Initialize() = 0;
-				virtual void ShutDown() = 0;
+				virtual ~ICacheToTexture( void ) {}
+				virtual void Initialize( void ) = 0;
+				virtual void ShutDown( void ) = 0;
 				virtual void SetupCacheTexture( Gwen::Controls::Base* control ) = 0;
 				virtual void FinishCacheTexture( Gwen::Controls::Base* control ) = 0;
 				virtual void DrawCachedControlTexture( Gwen::Controls::Base* control ) = 0;
@@ -40,20 +39,20 @@ namespace Gwen
 		{
 			public:
 
-				Base();
-				virtual ~Base();
+				Base( void );
+				virtual ~Base( void );
 
-				virtual void Init() {};
+				virtual void Init( void ) {};
 
-				virtual void Begin() {};
-				virtual void End() {};
+				virtual void Begin( void ) {};
+				virtual void End( void ) {};
 
 				virtual void SetDrawColor( Color color ) {};
 
 				virtual void DrawFilledRect( Gwen::Rect rect ) {};
 
-				virtual void StartClip() {};
-				virtual void EndClip() {};
+				virtual void StartClip( void ) {};
+				virtual void EndClip( void ) {};
 
 				virtual void LoadTexture( Gwen::Texture* pTexture ) {};
 				virtual void FreeTexture( Gwen::Texture* pTexture ) {};
@@ -61,12 +60,18 @@ namespace Gwen
 				virtual void DrawMissingImage( Gwen::Rect pTargetRect );
 				virtual Gwen::Color PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color & col_default = Gwen::Color( 255, 255, 255, 255 ) ) { return col_default; }
 
-				virtual ICacheToTexture* GetCTT() { return NULL; }
+				virtual ICacheToTexture* GetCTT() { return nullptr; }
 
 				virtual void LoadFont( Gwen::Font* pFont ) {};
 				virtual void FreeFont( Gwen::Font* pFont ) {};
 				virtual void RenderText( Gwen::Font* pFont, Gwen::Point pos, const Gwen::UnicodeString & text );
 				virtual Gwen::Point MeasureText( Gwen::Font* pFont, const Gwen::UnicodeString & text );
+
+// BEATO Begin:	Inplement a frame buffer utility to create render canvas
+				virtual void CreateFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) {};
+				virtual void FreeFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) {};
+				virtual void DrawFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) {};
+// BEATO End
 
 				//
 				// No need to implement these functions in your derived class, but if
