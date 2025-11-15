@@ -31,7 +31,11 @@ PFNGLENABLEPROC                                 glEnable = nullptr;
 PFNGLFINISHPROC                                 glFinish = nullptr;
 PFNGLFLUSHPROC                                  glFlush = nullptr;
 
+// blending
 PFNGLBLENDFUNCPROC                              glBlendFunc = nullptr;
+PFNGLBLENDFUNCSEPARATEPROC                      glBlendFuncSeparate = nullptr;
+PFNGLBLENDCOLORPROC                             glBlendColor = nullptr;
+PFNGLBLENDEQUATIONPROC                          glBlendEquation = nullptr;
 
 PFNGLGETERRORPROC                               glGetError = nullptr;
 PFNGLGETSTRINGPROC                              glGetString = nullptr;
@@ -47,7 +51,6 @@ PFNGLCLEARPROC                                  glClear = nullptr;
 // color buffer 
 PFNGLCLEARCOLORPROC                             glClearColor = nullptr;
 PFNGLCOLORMASKPROC                              glColorMask = nullptr;
-PFNGLBLENDFUNCSEPARATEPROC                      glBlendFuncSeparate = nullptr;
 PFNGLLOGICOPPROC                                glLogicOp = nullptr;
 
 // depth buffer
@@ -310,6 +313,9 @@ void gl::Context::LoadFunctions( void )
     glFlush = reinterpret_cast<PFNGLFLUSHPROC>( GetFunctionPointer( "glFlush" ) );
 
     glBlendFunc = reinterpret_cast<PFNGLBLENDFUNCPROC>( GetFunctionPointer( "glBlendFunc" ) );
+    glBlendFuncSeparate = reinterpret_cast<PFNGLBLENDFUNCSEPARATEPROC>( GetFunctionPointer( "glBlendFuncSeparate" ) );
+    glBlendColor = reinterpret_cast<PFNGLBLENDCOLORPROC>( GetFunctionPointer( "glBlendColor" ) );
+    glBlendEquation = reinterpret_cast<PFNGLBLENDEQUATIONPROC>( GetFunctionPointer( "glBlendEquation" ) );
 
     glGetError = reinterpret_cast<PFNGLGETERRORPROC>( GetFunctionPointer( "glGetError" ) );
     glGetString = reinterpret_cast<PFNGLGETSTRINGPROC>( GetFunctionPointer( "glGetString" ) );
@@ -325,7 +331,6 @@ void gl::Context::LoadFunctions( void )
     // color buffer 
     glClearColor = reinterpret_cast<PFNGLCLEARCOLORPROC>( GetFunctionPointer( "glClearColor" ) );
     glColorMask = reinterpret_cast<PFNGLCOLORMASKPROC>( GetFunctionPointer( "glColorMask" ) );
-    glBlendFuncSeparate = reinterpret_cast<PFNGLBLENDFUNCSEPARATEPROC>( GetFunctionPointer( "glBlendFuncSeparate" ) );
     glLogicOp = reinterpret_cast<PFNGLLOGICOPPROC>( GetFunctionPointer( "glLogicOp" ) );
 
     // depth buffer

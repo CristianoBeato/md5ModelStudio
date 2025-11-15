@@ -32,7 +32,11 @@ extern PFNGLENABLEPROC                                  glEnable;
 extern PFNGLFINISHPROC                                  glFinish;
 extern PFNGLFLUSHPROC                                   glFlush;
 
+// blending
 extern PFNGLBLENDFUNCPROC                               glBlendFunc;
+extern PFNGLBLENDFUNCSEPARATEPROC                       glBlendFuncSeparate;
+extern PFNGLBLENDCOLORPROC                              glBlendColor;
+extern PFNGLBLENDEQUATIONPROC                           glBlendEquation;
 
 extern PFNGLGETERRORPROC                                glGetError;
 extern PFNGLGETSTRINGPROC                               glGetString;
@@ -48,7 +52,6 @@ extern PFNGLCLEARPROC                                   glClear;
 // color buffer 
 extern PFNGLCLEARCOLORPROC                              glClearColor;
 extern PFNGLCOLORMASKPROC                               glColorMask;
-extern PFNGLBLENDFUNCSEPARATEPROC                       glBlendFuncSeparate;
 extern PFNGLLOGICOPPROC                                 glLogicOp;
 
 // depth buffer
