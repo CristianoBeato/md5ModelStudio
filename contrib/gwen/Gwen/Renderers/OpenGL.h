@@ -8,10 +8,9 @@
 #define GWEN_RENDERERS_OPENGL_H
 
 #include <SDL3/SDL_video.h>
-#include "Gwen/Gwen.h"
-#include "Gwen/BaseRender.h"
-#include "glm/glm.hpp"
+#include "crglCore.hpp"
 #include "crglContext.hpp"
+#include "Gwen/BaseRender.h"
 
 namespace Gwen
 {
@@ -62,6 +61,9 @@ namespace Gwen
 				virtual void FreeFont( Gwen::Font* pFont ) override;
 				virtual void LoadTexture( Gwen::Texture* pTexture ) override;
 				virtual void FreeTexture( Gwen::Texture* pTexture ) override;
+				virtual void CreateFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) override;
+				virtual void FreeFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) override;
+				virtual void DrawFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) override;
 				Gwen::Color PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color & col_default ) override;
 				Gwen::Point MeasureText( Gwen::Font* pFont, const Gwen::UnicodeString & text );
 
@@ -99,6 +101,7 @@ namespace Gwen
 				gl::Image			m_white;
 				gl::Image			m_fontImage;				
 				gl::Sampler			m_sample;
+				gl::Sampler			m_fontSample;
 				GLushort*			m_elements;
 				GLfloat*			m_vertexes;
 				

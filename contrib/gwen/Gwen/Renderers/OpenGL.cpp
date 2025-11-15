@@ -6,12 +6,15 @@
 #include "Gwen/WindowProvider.h"
 #include "FontData.h"
 
-#include <math.h>
+#include <iostream>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
 #include "OpenGL.h"
 
+#define DISABLE_BLENDING 0
 #define DISABLE_SCISSOR 0
 #define USE_SDL_TTF 1
 
@@ -23,21 +26,23 @@ constexpr size_t   k_VERTEX_SIZE = sizeof( float ) * 4;
 
 struct glyph_t 
 {
-    float u0 = 0.0f;
-    float v0 = 0.0f;
-    float u1 = 0.0f;
-    float v1 = 0.0f;
-    int w = 0;
-    int h = 0;
-    int advance = 0;
-    int bearingX = 0; 
-    int bearingY = 0;
+	int advance = 0;
+	glm::ivec2  size;
+	glm::ivec2	bearings;
+	glm::vec4	tcoord;
 };
 
 struct  renderFont_t
 {
     gl::Image   texture;
-    glyph_t     glyphs[256];
+	int			h = 0;	
+	glyph_t     glyphs[256];
+};
+
+struct renderFrameBuffer_t
+{
+	gl::FrameBuffer		frameBuffer;
+	gl::Image			image;
 };
 
 static int ReadShaderSource( const char* path, char** source )
@@ -180,9 +185,11 @@ void Gwen::Renderer::OpenGL::Begin( void )
 	GLsizeiptr uboSizes = sizeof( float ) * 20;
 	m_pContext->BindUniformBuffers( &ubo, &uboOffset, &uboSizes, 0, 1 );
 
-	glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+#if !DISABLE_BLENDING
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable( GL_BLEND );
 	glDisable( GL_DEPTH_TEST );
+#endif
 	//glEnable( GL_RASTERIZER_DISCARD );
 }
 
@@ -298,8 +305,19 @@ void Gwen::Renderer::OpenGL::DrawTexturedRect( Gwen::Texture* pTexture, Gwen::Re
 	bounds_t pos{};
 	bounds_t uv{};
 
-	gl::Image* tex = static_cast<gl::Image*>( pTexture->data );
+	if( pTexture == nullptr ) 
+	{
+		DrawMissingImage( rect );
+		return;
+	}
 
+	if ( pTexture->data == nullptr )
+	{
+		DrawMissingImage( rect );	
+		return;
+	}
+
+	gl::Image* tex = static_cast<gl::Image*>( pTexture->data );
 	if ( m_mode != RECT_TEXTURED )
 	{
 		Flush();
@@ -349,13 +367,14 @@ void Gwen::Renderer::OpenGL::RenderText(Gwen::Font *pFont, Gwen::Point pos, cons
 	if ( !text.length() )
 		return;
 
+	// tranlate text star position
 	Translate( pos.x, pos.y );
 	
 	renderFont_t* font = static_cast<renderFont_t*>( pFont->data );
 	if ( m_mode != RECT_FONT )
 	{
 		GLuint texture = font->texture;
-		GLuint sample = m_sample;
+		GLuint sample = m_fontSample;
 		m_pContext->BindTextures( &texture, &sample, 0, 1 );
 		m_mode = RECT_FONT;
 	}
@@ -380,13 +399,21 @@ void Gwen::Renderer::OpenGL::RenderText(Gwen::Font *pFont, Gwen::Point pos, cons
 		else
 			g = font->glyphs[ch];
 
-		// posição de cada vértice
-		float rx0 = pos.x + offset + g.bearingX;
-		float ry0 = pos.y + g.bearingY;
-		float rx1 = rx0 + g.w;
-		float ry1 = ry0 + g.h;
+		///
+		/// 
+		///
 
-		AddQuad( { rx0, ry0, rx1 , ry1 }, { g.u0, g.v0, g.u1, g.v1 } );
+		int h = font->h; // max gltph height, to help alinhate characters to top lef render origin to bottom left
+
+		Rect r;
+		r.x = pos.x - g.bearings.x + offset;
+		r.y = pos.y + h - g.size.y;
+		r.w = pos.x + g.size.x + offset;
+		r.h = pos.y + h - g.bearings.y;
+		
+		//Translate( r );
+
+		AddQuad( { (float)r.x, (float)r.y, (float)r.w , (float)r.h }, { g.tcoord.x, g.tcoord.y, g.tcoord.z, g.tcoord.w } );
 
 		// avança pro próximo caractere
         offset += g.advance;
@@ -407,6 +434,7 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
 	font = TTF_OpenFont( fontname.c_str(), pFont->size );
 	if ( !font )
 	{
+		std::cout << "Failed to open font " << pFont->facename.c_str() << std::endl;
 		pFont->data = nullptr;
         return;
 	}
@@ -423,19 +451,15 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
     // create a white transparent background
     SDL_PixelFormatDetails formatDetails{};
     formatDetails.format = SDL_PIXELFORMAT_RGBA32;
-    SDL_FillSurfaceRect( atlas, nullptr, SDL_MapRGBA( &formatDetails, nullptr, 255, 255, 255, 0 ) );
+    SDL_FillSurfaceRect( atlas, nullptr, SDL_MapRGBA( &formatDetails, nullptr, 0, 0, 0, 0 ) );
 
     int x = 0, y = 0, rowHeight = 0;
 
     for ( int ch = 0; ch < 256; ++ch ) 
     {
-
+		int minX, minY, maxX, maxY;
         SDL_Surface* glyphSurface = nullptr;
-#if 0
-        glyphSurface = TTF_RenderGlyph_Blended( font, ch, { 255, 255, 255, 255 });
-#else
-        glyphSurface = TTF_RenderGlyph_Solid( font, ch, { 255, 255, 255, 255 } );
-#endif 
+        glyphSurface = TTF_RenderGlyph_Blended( font, ch, { 255, 255, 255, 255 } );
         if (!glyphSurface) 
             continue;
 
@@ -452,17 +476,27 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
         rowHeight = std::max(rowHeight, glyphSurface->h);
 
         glyph_t& g = glyphs[ch];
-        g.u0 = float(x) / 512;
-        g.v0 = float(y) / 512;
-        g.u1 = float(x + glyphSurface->w) / 512;
-        g.v1 = float(y + glyphSurface->h) / 512;
-        g.w = glyphSurface->w;
-        g.h = glyphSurface->h;
+		g.tcoord.x = float( x ) / 512;
+        g.tcoord.y = float( y ) / 512;
+        g.tcoord.z = float( x + glyphSurface->w ) / 512;
+        g.tcoord.w = float( y + glyphSurface->h ) / 512;
 
-        TTF_GetGlyphMetrics( font, ch, &g.bearingX, nullptr, &g.bearingY, nullptr, &g.advance );
+        TTF_GetGlyphMetrics( font, ch, &minX, &maxX, &minY, &maxY, &g.advance );
 
-        x += glyphSurface->w + 1;
-        SDL_DestroySurface( glyphSurface );
+#if 1
+		g.size.x = glyphSurface->w;
+		g.size.y = glyphSurface->h;
+#else
+		g.size.x = maxX - minX;
+		g.size.y = maxY - minY;
+#endif
+
+		g.bearings.x = minX;
+		g.bearings.y = minY;
+
+		x += glyphSurface->w + 1;
+        
+		SDL_DestroySurface( glyphSurface );
     }
 
 #if 0 // just to help degub
@@ -475,6 +509,7 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
 	static_cast<renderFont_t*>( pFont->data )->texture = gl::Image();
 	static_cast<renderFont_t*>( pFont->data )->texture.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, { 512, 512, 0 });
 	static_cast<renderFont_t*>( pFont->data )->texture.SubImage( 0, { 0, 0, 0 }, { 512, 512, 0}, atlas->pixels );
+	static_cast<renderFont_t*>( pFont->data )->h = TTF_GetFontHeight( font );
 
 	// copy the glyphs
     std::memcpy( static_cast<renderFont_t*>( pFont->data )->glyphs, glyphs, sizeof( glyph_t ) * 256 );
@@ -490,7 +525,6 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
         TTF_CloseFont( font );
         font = nullptr;
     }
-
 #endif
 }
 
@@ -517,6 +551,7 @@ void Gwen::Renderer::OpenGL::LoadTexture(Gwen::Texture *pTexture)
 	SDL_Surface* image = IMG_Load( fileName );
 	if ( !image )
 	{
+		std:: cout << "Falied to open Image " << pTexture->name.Get().c_str() << std::endl;
 		pTexture->failed = true;
 		return;
 	}
@@ -570,10 +605,9 @@ void Gwen::Renderer::OpenGL::LoadTexture(Gwen::Texture *pTexture)
 	}
 
 	// Create a little texture pointer..
-	gl::Image* pglTexture = new gl::Image();
+	pTexture->data = new gl::Image();
 	
 	// Sort out our GWEN texture
-	pTexture->data = pglTexture;
 	pTexture->width = image->w;
 	pTexture->height = image->h;
 
@@ -582,12 +616,8 @@ void Gwen::Renderer::OpenGL::LoadTexture(Gwen::Texture *pTexture)
 	dim.width = image->w;
 	dim.height = image->h;
 
-	pglTexture->Create( GL_TEXTURE_2D, internalFormat, 1, 1, dim );
-	
-	pos.xoffset = 0;
-	pos.yoffset = 0;
-	pos.zoffset = 0;
-	pglTexture->SubImage( 0, pos, dim,  image->pixels, false );
+	reinterpret_cast<gl::Image*>( pTexture->data )->Create( GL_TEXTURE_2D, internalFormat, 1, 1, dim );
+	reinterpret_cast<gl::Image*>( pTexture->data )->SubImage( 0, { 0, 0, 0}, dim,  image->pixels, false );
 
 	SDL_DestroySurface( image );
 	image = nullptr;
@@ -604,6 +634,59 @@ void Gwen::Renderer::OpenGL::FreeTexture( Gwen::Texture* pTexture )
 	tex->Destroy();
 	delete tex;
 	pTexture->data = nullptr;
+}
+
+void Gwen::Renderer::OpenGL::CreateFrameBuffer(Gwen::FrameBuffer *pFrameBuffer)
+{
+	if ( !pFrameBuffer )
+		return;
+
+	pFrameBuffer->data = new renderFrameBuffer_t();
+
+	// create the frame buffer handle
+	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Create();
+
+	// create a 2d image
+	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->image.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, { pFrameBuffer->width, pFrameBuffer->height, 0 } );
+
+	// attach our texture to frame buffer
+	gl::FrameBuffer::attachament_t attachament{};
+
+	// destroy if failed
+	if( !static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Attach( &attachament, 0, 1 ) )
+	{
+		static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Destroy();
+		static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->image.Destroy();
+		delete static_cast<renderFrameBuffer_t*>( pFrameBuffer->data );
+	}
+}
+
+void Gwen::Renderer::OpenGL::FreeFrameBuffer(Gwen::FrameBuffer *pFrameBuffer)
+{
+	if ( !pFrameBuffer || !pFrameBuffer->data )
+		return;
+
+	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Destroy();
+	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->image.Destroy();
+	delete static_cast<renderFrameBuffer_t*>( pFrameBuffer->data );
+}
+
+void Gwen::Renderer::OpenGL::DrawFrameBuffer(Gwen::FrameBuffer *pFrameBuffer)
+{
+	if ( !pFrameBuffer || !pFrameBuffer->data )
+		return;
+
+	m_pContext->BindFrameBuffer( static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer );
+
+	// TODO: the draw call here
+
+	//
+
+	// restore to defalt framebuffer
+	m_pContext->BindFrameBuffer( 0 );
+
+	// now we Draw as image
+
 }
 
 Gwen::Color Gwen::Renderer::OpenGL::PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color & col_default )
@@ -656,12 +739,10 @@ Gwen::Point Gwen::Renderer::OpenGL::MeasureText(Gwen::Font *pFont, const Gwen::U
 		else
 			g = font->glyphs[ch];
 
-		if( p.y < g.h )
-			p.y = g.h;
-
 		p.x += g.advance; 
 	}
 
+	p.y = font->h;
 	return p;
 }
 
@@ -815,13 +896,18 @@ bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
 	m_sample.Parameteri( GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 	m_sample.Parameteri( GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
+	// we don't filter fonts 
+	m_fontSample.Create();
+	m_fontSample.Parameteri( GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	m_fontSample.Parameteri( GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+
 	///
 	/// Load Vertex Shader
 	///
 	shaders[0] = new gl::Shader();
-    len = ReadShaderSource( "./shaders/draw_gui.vs", &sources );
+    len = ReadShaderSource( "./assets/shaders/draw_gui.vs", &sources );
     if ( len < 0 )
-        throw std::runtime_error( "Error can't open file" );
+        throw std::runtime_error( "Failed To Load Vertex Shader" );
     
     if( !shaders[0]->Create( GL_VERTEX_SHADER, &sources, &len, 1 ) )
         throw std::runtime_error( "Failed to create vertex shader" );
@@ -836,9 +922,9 @@ bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
 	/// Load Fragment shader
 	///
     shaders[1] = new gl::Shader();
-    len = ReadShaderSource( "./shaders/draw_gui.fs", &sources );
+    len = ReadShaderSource( "./assets/shaders/draw_gui.fs", &sources );
     if ( len < 0 )
-        throw std::runtime_error( "Error can't open file" );
+        throw std::runtime_error( "Failed To Load Fragmente Shader" );
 
     if( !shaders[1]->Create( GL_FRAGMENT_SHADER, &sources, &len, 1 ) )
         throw std::runtime_error( "Failed to create fragment shader" );
@@ -887,6 +973,9 @@ bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
 
 bool Gwen::Renderer::OpenGL::ShutdownContext( Gwen::WindowProvider* pWindow )
 {
+	if ( m_fontSample )
+		m_fontSample.Destroy();
+	
 	if( m_sample )
 		m_sample.Destroy();
 
