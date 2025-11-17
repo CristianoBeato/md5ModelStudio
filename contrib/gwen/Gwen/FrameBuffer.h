@@ -11,20 +11,21 @@ namespace Gwen
     {
         void*	data;
 		bool	failed;
-		int		width;
+		int     samples;
+        int		width;
 		int		height;
 
         FrameBuffer( void )
         {
             data = nullptr;
             failed = true;
+            samples = 0;
             width = 0;
             height = 0;
         }
 
         ~FrameBuffer( void )
         {
-
         }
 
         void Allocate( Gwen::Renderer::Base* pRender )

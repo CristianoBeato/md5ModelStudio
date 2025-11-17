@@ -60,12 +60,12 @@ bool gl::RenderBuffer::Create( const GLuint in_width, const GLuint in_height, co
     else
         glNamedRenderbufferStorage( m_renderBufferHandle->renderBuffer, in_format, in_width, in_height );   
 
-    return true;
+    return m_renderBufferHandle->renderBuffer != 0 && glIsRenderbuffer( m_renderBufferHandle->renderBuffer ) == GL_TRUE;
 }
 
 void gl::RenderBuffer::Destroy( void )
 {
-    if ( m_renderBufferHandle != nullptr )
+    if ( !m_renderBufferHandle )
         return;
 
     if ( m_renderBufferHandle->renderBuffer != 0 )
@@ -167,14 +167,11 @@ void gl::FrameBuffer::Blit( const GLuint in_dstFrameBuffer, const rect_t in_srcR
         return;
     }
 
-    glBlitNamedFramebuffer( 
-            m_frameBufferHandle->frameBuffer, 
-            in_dstFrameBuffer, 
+    glBlitNamedFramebuffer( m_frameBufferHandle->frameBuffer, in_dstFrameBuffer,
             in_srcRec.X0, in_srcRec.Y0, in_srcRec.X1, in_srcRec.Y1,
             in_dstRect.X0, in_dstRect.Y0, in_dstRect.X1, in_dstRect.Y1, 
             in_mask, in_filter );  
 }
-
 
 GLuint gl::FrameBuffer::Handler(void) const
 {

@@ -61,11 +61,11 @@ namespace Gwen
 				typedef std::map<Gwen::UnicodeString, Gwen::Event::Caller*> AccelMap;
 
 				Base( Base* pParent, const Gwen::String & Name = "" );
-				virtual ~Base();
+				virtual ~Base( void );
 
-				virtual const char* GetTypeName() { return "Base"; }
+				virtual const char* GetTypeName( void ) { return "Base"; }
 
-				virtual void DelayedDelete();
+				virtual void DelayedDelete( void );
 				virtual void PreDelete( Gwen::Skin::Base* skin ) {};
 
 				virtual void SetParent( Controls::Base* pParent );
@@ -85,7 +85,7 @@ namespace Gwen
 				virtual void SetName( const Gwen::String & name ) { m_Name = name; }
 				virtual const Gwen::String & GetName() { return m_Name; }
 
-				virtual void Think() {}
+				virtual void Think( void ) {}
 
 			protected:
 

@@ -28,9 +28,8 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "crglCore.hpp"
-
 #include "Gwen/Gwen.h"
-
+#include "Image.hpp"
 #include "md5Mesh/md5Model.hpp"
 
 #endif //__MAIN_PRECOMPILED_HPP__
