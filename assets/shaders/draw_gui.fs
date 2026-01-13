@@ -16,5 +16,9 @@ layout( location = 0 ) in VertexData
 //
 void main()
 {
-    fragment = texture( uTexture, fs_in.texCoord ) * fs_in.color;
+    vec4 smpcolor = texture( uTexture, fs_in.texCoord ) * fs_in.color; 
+    if( smpcolor.a < 0.1 )
+        discard;
+    
+    fragment = smpcolor;
 }

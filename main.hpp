@@ -6,11 +6,30 @@
 #ifndef __MAIN_HPP__
 #define __MAIN_HPP__
 
-#include "Gwen/Gwen.h"
-#include "Gwen/Controls.h"
+#include <SDL3/SDL_video.h>
+#include "crglContext.hpp"
+#include "dialogs/MainDialog.hpp"
 
-class crViewPort;
-class crMain : public Gwen::Controls::Base
+class crContext : public gl::Context
+{
+public:
+    crContext( void );
+    ~crContext( void );
+
+    virtual bool    Create( const void* in_windowHandle);
+    virtual void    Destroy( void );
+    virtual bool    MakeCurrent( void );
+    virtual bool    Release( void );
+    virtual bool    SwapBuffers( void );
+    virtual void*   GetFunctionPointer( const char* in_name ) const;
+    virtual void    DebugOuput( const char* in_message ) const;
+
+private:    
+    SDL_Window*     m_window;
+    SDL_GLContext   m_context;
+};
+
+class crMain
 {    
 public:
     crMain( void );
@@ -24,26 +43,18 @@ public:
     void    Clear( void );
 
 private:
-    Gwen::Renderer::Base*           m_renderer;
-    Gwen::Skin::Base*               m_skin;
-    Gwen::Controls::WindowCanvas*   m_canvas;
-    Gwen::Controls::MenuStrip*      m_menu;
-    Gwen::Controls::StatusBar*      m_statusbar;
-    Gwen::Controls::TabControl*     m_dockControlLeft;
-    Gwen::Controls::TabButton*      m_jointsTab;
-    Gwen::Controls::TabButton*      m_meshesTab;
-    Gwen::Controls::DrawPanel*      m_viewport;
+    uint8_t         m_state;
+    uint32_t        m_frameTime;
+    SDL_Mutex*      m_renderLock;
+    SDL_Thread*     m_drawThread;
+    crContext*      m_glContext;
+    crMainDialog*   m_maindDialog;
+    
+    void    Events( void );
+    void    Draw( void );
+    void    Renderer( void );
 
-    void    CreateUI( void );
-    void    DestroyUI( void );
-
-    // Events function
-    void MenuLoad( Gwen::Controls::Base* pControl );
-    void MenuSave( Gwen::Controls::Base* pControl );
-    void MenuExport( Gwen::Controls::Base* pControl );
-    void MenuImport( Gwen::Controls::Base* pControl );
-    void MenuQui( Gwen::Controls::Base* pControl );
-
+    static int DrawThreadEntryPoint( void* ptr );
 };
 
 #endif //__MAIN_HPP__

@@ -11,7 +11,10 @@
 #include "Gwen/Renderers/OpenGL.h"
 #include "Gwen/Skins/TexturedBase.h"
 #include "Gwen/Controls/WindowCanvas.h"
-#include "ViewPort.hpp"
+//#include "ViewPort.hpp"
+
+constexpr uint32_t FRAMERATE = 60;
+constexpr uint32_t FRAMETIME = 1000 / FRAMERATE; // frametime duration in ms ( 16 for 60 fps )
 
 static const char* k_NOGUI = "--nogui";
 static const char* k_IMPORT = "--import";
@@ -30,36 +33,71 @@ static const char* k_HELP_TEXT =
     "--help         print help\n"
 };
 
-crMain::crMain( void ) : Gwen::Controls::Base( nullptr, "main" ),
-    m_renderer( nullptr ),
-    m_skin( nullptr ),
-    m_canvas( nullptr ),
-    m_menu( nullptr ),
-    m_statusbar( nullptr )
+crMain::crMain( void ) : 
+    m_state( 0 ),
+    m_glContext( nullptr )
 {
+    std::cout << "Initializing SDL3\n";
+    // initialize SDL3 video ( window ) and event management
+    if( !SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) )
+        throw std::runtime_error( SDL_GetError() );
+
+    m_renderLock = SDL_CreateMutex();
+
+    std::cout << "Creating main window\n";
+
+    m_glContext = new crContext();
+    if( !m_glContext->Create( nullptr ) )
+        throw std::runtime_error( "Failed to initialize render context" );
+
+    m_maindDialog = new crMainDialog( m_glContext );
+
+    m_glContext->Release();
+
+    m_drawThread = SDL_CreateThread( DrawThreadEntryPoint, "DrawThread", reinterpret_cast<void*>( this ) );
+    SDL_DetachThread( m_drawThread );
+
+    m_state = 1;
 }
 
 crMain::~crMain( void )
 {   
+    std::cout << "Releasing main window\n";
+
+    m_glContext->MakeCurrent();
+
+    if( m_maindDialog != nullptr )
+    {
+        delete m_maindDialog;
+        m_maindDialog = nullptr;
+    }
+
+    if( !m_glContext )
+    {
+        m_glContext->Destroy();
+        delete m_glContext;
+        m_glContext = nullptr;
+    }
+
+    if ( m_renderLock )
+    {
+        SDL_DestroyMutex( m_renderLock );
+        m_renderLock = nullptr;
+    }
+
+    std::cout << "Release SDL3\n";
+    SDL_Quit();
 }
 
 void crMain::Run(void)
 {
     bool running = true;
-    if ( !SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) )
-        throw std::runtime_error( SDL_GetError() );
-
-    CreateUI();
-
-    while( !m_canvas->WantsQuit() )
+ 
+    while( m_state )
     {
-        // render our ui
-        m_canvas->DoThink();
+        // process event input
+        Events();
     }
-
-    DestroyUI();
-
-    SDL_Quit();
 }
 
 void crMain::Open( const std::string &in_file )
@@ -82,180 +120,73 @@ void crMain::Clear(void)
 {
 }
 
-void crMain::CreateUI(void)
+void crMain::Events(void)
 {
-    // Note: Order is important here. you need to create the WindowCanvas before
-	// you setup the skin - because the renderer won't be properly set up
-	// if you try to do it before (The window canvas initializes the renderer)
-	//
-	// Create the skin and renderer
-    m_renderer = new Gwen::Renderer::OpenGL();
-    m_skin = new Gwen::Skin::TexturedBase( m_renderer );
+    SDL_Event Event{};
+    SDL_WaitEvent( &Event );
 
-    // The window canvas is a cross between a window and a canvas
-	// It's cool because it takes care of creating an OS specific
-	// window - so we don't have to bother with all that crap.
-    m_canvas = new Gwen::Controls::WindowCanvas( -1, -1, 800, 600, m_skin, "md5ModelStudio" );
+    if ( Event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED || Event.type == SDL_EVENT_WINDOW_DESTROYED )
+    {   
+        m_state = 0; // done
+        return;
+    }
 
-    // Now it's safe to set up the skin
-    dynamic_cast<Gwen::Skin::TexturedBase*>(m_skin)->Init( "./assets/images/gwen_dark.png" );    
+    // lock scope
+    {
+        SDL_ScopedLock lock( m_renderLock );
 
-#if 1
-    dynamic_cast<Gwen::Skin::TexturedBase*>(m_skin)->SetDefaultFont( L"./assets/fonts/Inconsolata.ttf", 14.0f );
-#else
-    dynamic_cast<Gwen::Skin::TexturedBase*>(m_skin)->SetDefaultFont( L"./assets/fonts/OpenSans.ttf", 14.0f );
-#endif 
+        m_maindDialog->SetFrameTime( m_frameTime );
 
-    /// 
-    /// Create Program Layout
-    /// 
+        // pass input event to the gui
+        m_maindDialog->Events( Event );
+    }
+}
 
-    /// menu barr
-    m_menu = new Gwen::Controls::MenuStrip( m_canvas );
-    m_menu->Dock( Gwen::Pos::Top );
-
-    Gwen::Controls::MenuItem* pRoot = m_menu->AddItem( L"File" );
-    pRoot->GetMenu()->AddItem( L"Load", "", "Ctrl+L" )->SetAction( this, &crMain::MenuLoad );
-    pRoot->GetMenu()->AddItem( L"Save", "", "CTRL+S" )->SetAction( this, &crMain::MenuSave );
-    pRoot->GetMenu()->AddItem( L"Import", "", "Ctrl+Shift+S" )->SetAction( this, &crMain::MenuImport );
-    pRoot->GetMenu()->AddItem( L"Export", "", "Ctrl+Shift+S" )->SetAction( this, &crMain::MenuExport );
-    pRoot->GetMenu()->AddItem( L"Quit", "", "Ctrl+Q" )->SetAction( this, &crMain::MenuQui );
-
-    /// Status Barr
-    m_statusbar = new Gwen::Controls::StatusBar( m_canvas );
-	m_statusbar->Dock( Gwen::Pos::Bottom );
-
-    Gwen::Controls::Layout::Table* pCenter = new Gwen::Controls::Layout::Table( m_canvas );
-    pCenter->Dock( Gwen::Pos::Fill );
-
-    Gwen::Controls::Layout::TableRow* pLeft = new Gwen::Controls::Layout::TableRow( pCenter );
-    pLeft->SetBounds( 5, 5, 200, 200 );
-    pLeft->Dock( Gwen::Pos::Left );
-
-    Gwen::Controls::Layout::TableRow* pRight = new Gwen::Controls::Layout::TableRow( pCenter );
-    pRight->Dock( Gwen::Pos::Fill );
-
-    m_dockControlLeft = new Gwen::Controls::TabControl( pLeft );
-	m_jointsTab = m_dockControlLeft->AddPage( L"Joints" );
-	m_meshesTab = m_dockControlLeft->AddPage( L"Meshes" );
-    m_dockControlLeft->Dock( Gwen::Pos::Fill );
+void crMain::Draw(void)
+{
+    //
+    //
+    glClearColor( 0.0f, 0.6f, 0.7f, 1.0f );
+    glClear( GL_COLOR_BUFFER_BIT );
     
-#if 0		
-	Gwen::Controls::Base* pPage = pButton->GetPage();
-	Controls::RadioButtonController* pRadio = new Controls::RadioButtonController( pPage );
-	pRadio->SetBounds( 10, 10, 100, 100 );
-	pRadio->AddOption( "Top" )->Select();
-	pRadio->AddOption( "Bottom" );
-	pRadio->AddOption( "Left" );
-	pRadio->AddOption( "Right" );
-	pRadio->onSelectionChange.Add( m_canvas, &ThisClass::OnDockChange );
-#endif
+    {
+        SDL_ScopedLock lock( m_renderLock );
+        m_maindDialog->Draw();
+    }
 
-#if 1
-    m_viewport = new Gwen::Controls::DrawPanel( pRight ); 
-    m_viewport->Dock( Gwen::Pos::Fill );
-#else
-    m_viewport = new crViewPort( pRight );
-    m_viewport->Dock( Gwen::Pos::Fill );
-#endif
-
-    m_statusbar->SetText( "Welcome to MD5Studio" );
-
+    // swap window buffer
+    m_glContext->SwapBuffers();
 }
 
-void crMain::DestroyUI(void)
+void crMain::Renderer(void)
 {
-    if ( m_canvas )
+    uint64_t start = 0;
+    uint64_t end = 0;
+    m_glContext->MakeCurrent();
+    
+    // render loop
+    while ( m_state )
     {
-        delete m_canvas;
-        m_canvas = nullptr;
+        start = SDL_GetTicks();
+        Draw();
+        end = SDL_GetTicks();
+        
+        // limit frametime
+        m_frameTime = end - start;
+        SDL_Delay( m_frameTime < FRAMETIME ? FRAMETIME - m_frameTime : 0 );
     }
-
-    if( m_skin )
-    {
-        delete m_skin;
-        m_skin = nullptr;
-    }
-
-    if ( m_renderer )
-    {
-        delete m_renderer;
-        m_renderer = nullptr;
-    }
+    
+    m_glContext->Release();
 }
 
-void crMain::MenuLoad(Gwen::Controls::Base *pControl)
+int crMain::DrawThreadEntryPoint(void *ptr)
 {
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuckk" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Loading model %s", file.c_str() ) );
-    }
-
-    // we always clear the scene before load a new model
-    Clear();
-
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuckk" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Model %s loaded sucefully", file.c_str() ) );
-    }
+    crMain * mainApp = static_cast<crMain*>( ptr );
+    mainApp->Renderer();
+    return EXIT_SUCCESS;
 }
 
-void crMain::MenuSave(Gwen::Controls::Base *pControl)
-{
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuckk" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Saving model %s", file.c_str() ) );
-    }
-
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuckk" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Model %s saved sucefully", file.c_str() ) );
-    }
-}
-
-void crMain::MenuExport(Gwen::Controls::Base *pControl)
-{
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuck" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Exporting model %s", file.c_str() ) );
-    }
-
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuck" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Model %s exported sucefully", file.c_str() ) );
-    }    
-
-}
-
-void crMain::MenuImport(Gwen::Controls::Base *pControl)
-{
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuckk" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Importing model %s", file.c_str() ) );
-    }
-
-    Clear();
-
-    if ( m_statusbar )
-    {
-        Gwen::UnicodeString file = Gwen::Utility::StringToUnicode( "fuckk" );
-        m_statusbar->SetText( Gwen::Utility::Format( L"Model %s imported sucefully", file.c_str() ) );
-    }
-}
-
-void crMain::MenuQui(Gwen::Controls::Base *pControl)
-{
-    m_canvas->InputQuit();
-}
-
-int main( int argc, const char* argv[] )
+int main(int argc, char *argv[])
 {
     bool gui = true;
     std::string importModel;
@@ -266,7 +197,7 @@ int main( int argc, const char* argv[] )
     for (int i = 0; i < argc; i++)
     {
         const char* arg = argv[i];
-        if ( std::strncmp( arg, k_HELP, strlen( k_HELP ) ) == 0 )
+        if ( std::strncmp( arg, k_HELP, std::strlen( k_HELP ) ) == 0 )
         {
             std::cout << k_HELP_TEXT << std::endl;
             return EXIT_SUCCESS; // just print the help text
@@ -333,4 +264,97 @@ int main( int argc, const char* argv[] )
     }
     
     return EXIT_SUCCESS;
+}
+
+crContext::crContext( void ) :
+    m_window( nullptr ),
+    m_context( nullptr )
+{
+}
+
+crContext::~crContext(void)
+{
+}
+
+bool crContext::Create(const void *in_windowHandle)
+{
+    //
+    if( !( m_window = SDL_CreateWindow( "md5ModelStudio", 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE ) ) )
+        throw std::runtime_error( SDL_GetError() );
+
+    // 4.5 core
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 5 );
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
+    
+    // debug output enable
+    SDL_GL_SetAttribute( SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG );
+
+    // 32bit color
+    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_ALPHA_SIZE, 8 );
+
+    // depth stencil 24 8
+    SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 24 );
+    SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, 8 );
+
+    // sRGB enable
+    SDL_GL_SetAttribute( SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1 );
+
+    // 4x MSAA
+    SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 1 );
+    SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, 4 );
+
+    // use double buffer
+    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+
+    // Create the OpenGL Context
+    if( !( m_context = SDL_GL_CreateContext( m_window ) ) )
+        throw std::runtime_error( SDL_GetError() );
+
+    gl::Context::Init();
+    
+    return true;
+}
+
+void crContext::Destroy(void)
+{
+    if( m_context != nullptr )
+    {
+        SDL_GL_DestroyContext( m_context );
+        m_context = nullptr;
+    }
+
+    if( m_window != nullptr )
+    {
+        SDL_DestroyWindow( m_window );
+        m_window = nullptr;
+    }
+}
+
+bool crContext::MakeCurrent(void)
+{
+    return SDL_GL_MakeCurrent( m_window, m_context );
+}
+
+bool crContext::Release(void)
+{
+    return SDL_GL_MakeCurrent( m_window, nullptr );
+}
+
+bool crContext::SwapBuffers(void)
+{
+    return SDL_GL_SwapWindow( m_window );
+}
+
+void *crContext::GetFunctionPointer(const char *in_name) const
+{
+    return reinterpret_cast<void*>( SDL_GL_GetProcAddress( in_name ) );
+}
+
+void crContext::DebugOuput(const char *in_message) const
+{
+    std::cout << in_message << std::endl;
 }
