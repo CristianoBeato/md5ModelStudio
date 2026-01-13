@@ -14,10 +14,6 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "OpenGL.h"
 
-#define DISABLE_BLENDING 0
-#define DISABLE_SCISSOR 0
-#define USE_SDL_TTF 1
-
 constexpr uint32_t k_QUAD_VERTEX_COUNT = 4;
 constexpr uint32_t k_QUAD_INDEX_COUNT  = 6;
 constexpr uint32_t k_MAX_ELEMENTS_COUNT = 16 * 1024;
@@ -42,7 +38,7 @@ struct  renderFont_t
 struct renderFrameBuffer_t
 {
 	gl::FrameBuffer		frameBuffer;
-	gl::Image			image;
+	gl::Image			renderImage;
 };
 
 static int ReadShaderSource( const char* path, char** source )
@@ -68,88 +64,6 @@ static int ReadShaderSource( const char* path, char** source )
     return len;
 }
 
-Gwen::Renderer::SDL3Context::SDL3Context( void ) : m_renderContext( nullptr ), m_renderWindown( nullptr )
-{
-}
-
-Gwen::Renderer::SDL3Context::~SDL3Context( void )
-{
-}
-
-bool Gwen::Renderer::SDL3Context::Create(const void *in_windowHandle)
-{
-    m_renderWindown = (SDL_Window*) in_windowHandle;
-
-    int channelcolorbits = 8;
-    int tdepthbits = 24;
-    int tstencilbits = 8;
-    
-    // setup window buffer color 
-    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, channelcolorbits );
-	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, channelcolorbits );
-	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, channelcolorbits );
-    SDL_GL_SetAttribute( SDL_GL_ALPHA_SIZE, channelcolorbits );
-	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, tdepthbits );
-	SDL_GL_SetAttribute( SDL_GL_STENCIL_SIZE, tstencilbits );
-
-    // 4x MSAA
-    SDL_GL_SetAttribute( SDL_GL_MULTISAMPLEBUFFERS, 1 );
-	SDL_GL_SetAttribute( SDL_GL_MULTISAMPLESAMPLES, 4 );
-	
-    // 4.6 core
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 );
-	SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 6 );
-    SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE );
-			
-    // debug output
-	SDL_GL_SetAttribute( SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG );
-	
-    m_renderContext = SDL_GL_CreateContext( m_renderWindown );
-    if ( !m_renderContext )
-        return false;
-    
-    Init();
-
-    return true;
-}
-
-void Gwen::Renderer::SDL3Context::Destroy(void)
-{
-    Finalize();
-
-    if ( m_renderContext != nullptr )
-    {
-        SDL_GL_DestroyContext( m_renderContext );
-        m_renderContext = nullptr;
-    }
-}
-
-bool Gwen::Renderer::SDL3Context::MakeCurrent(void)
-{
-    return SDL_GL_MakeCurrent( m_renderWindown, m_renderContext );
-}
-
-bool Gwen::Renderer::SDL3Context::Release(void)
-{
-    return SDL_GL_MakeCurrent( m_renderWindown, nullptr );
-}
-
-bool Gwen::Renderer::SDL3Context::SwapBuffers(void)
-{
-    return SDL_GL_SwapWindow( m_renderWindown );
-}
-
-void *Gwen::Renderer::SDL3Context::GetFunctionPointer(const char *in_name) const
-{
-    return (void*)SDL_GL_GetProcAddress( in_name );
-}
-
-void Gwen::Renderer::SDL3Context::DebugOuput(const char *in_message) const
-{
-    std::cout << in_message;
-}
-
 Gwen::Renderer::OpenGL::OpenGL( void ) :
 	m_mode( RECT_LINE ),
 	m_vhead( 0 ),
@@ -160,19 +74,63 @@ Gwen::Renderer::OpenGL::OpenGL( void ) :
 	m_vertexes( nullptr  ),
 	m_pContext( nullptr )
 {
-	m_fLetterSpacing = 1.0f / 16.0f;
-	m_fFontScale[0] = 1.5f;
-	m_fFontScale[1] = 1.5f;
+}
+
+Gwen::Renderer::OpenGL::OpenGL(gl::Context *in_pContext):
+	m_mode( RECT_LINE ),
+	m_vhead( 0 ),
+	m_vtail( 0 ),
+	m_ihead( 0 ),
+	m_itail( 0 ),
+	m_elements( nullptr ),
+	m_vertexes( nullptr  ),
+	m_pContext( in_pContext )
+{
 }
 
 Gwen::Renderer::OpenGL::~OpenGL( void )
 {
-	DestroyDebugFont();
 }
 
 void Gwen::Renderer::OpenGL::Init( void )
 {
-	CreateDebugFont();
+	// todo throw a error
+	if( !TTF_Init() )
+		throw std::runtime_error( SDL_GetError() );
+
+	InitShaders();
+	InitBuffers();
+	CreateSamplers();
+	CreateVertexArray();
+}
+
+void Gwen::Renderer::OpenGL::Release(void)
+{
+	if ( m_fontSample )
+		m_fontSample.Destroy();
+	
+	if( m_sample )
+		m_sample.Destroy();
+
+	if( m_white )
+		m_white.Destroy();
+
+	if ( m_uniformBuffer )
+		m_uniformBuffer.Destroy();	
+
+	if( m_elementBuffer )
+		m_elementBuffer.Destroy();
+
+	if( m_vertexBuffer )
+		m_vertexBuffer.Destroy();
+
+	if ( m_program )
+		m_program.Destroy();
+	
+	if( m_vertexArray )
+		m_vertexArray.Destroy();
+
+	TTF_Quit();
 }
 
 void Gwen::Renderer::OpenGL::Begin( void )
@@ -185,12 +143,14 @@ void Gwen::Renderer::OpenGL::Begin( void )
 	GLsizeiptr uboSizes = sizeof( float ) * 20;
 	m_pContext->BindUniformBuffers( &ubo, &uboOffset, &uboSizes, 0, 1 );
 
-#if !DISABLE_BLENDING
 	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable( GL_BLEND );
 	glDisable( GL_DEPTH_TEST );
-#endif
-	//glEnable( GL_RASTERIZER_DISCARD );
+	
+	// clear defalt frame buffer
+	glClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
+	glViewport( 0, 0, m_width, m_heigth );
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 }
 
 void Gwen::Renderer::OpenGL::End( void )
@@ -214,21 +174,17 @@ void Gwen::Renderer::OpenGL::SetDrawColor( Gwen::Color color )
 void Gwen::Renderer::OpenGL::StartClip( void )
 {
 	Flush();
-#if !DISABLE_SCISSOR
 	Gwen::Rect rect = ClipRegion();
 	rect.y = m_heigth - ( rect.y + rect.h );
 	
 	glScissor( rect.x * Scale(), rect.y * Scale(), rect.w * Scale(), rect.h * Scale() );
 	glEnable( GL_SCISSOR_TEST );
-#endif
 };
 
 void Gwen::Renderer::OpenGL::EndClip( void )
 {
 	Flush();
-#if !DISABLE_SCISSOR
  	glDisable( GL_SCISSOR_TEST );
-#endif
 };
 
 void Gwen::Renderer::OpenGL::DrawPixel(int x, int y)
@@ -422,14 +378,14 @@ void Gwen::Renderer::OpenGL::RenderText(Gwen::Font *pFont, Gwen::Point pos, cons
 
 void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
 {
+	TTF_Font*       font = nullptr;
+    SDL_Surface*    atlas = nullptr;
+    glyph_t         glyphs[256]{};
+
 	if ( !pFont || pFont->facename.empty() )
 		return;
 
 	Gwen::String fontname = Gwen::Utility::UnicodeToString( pFont->facename );
-#if USE_SDL_TTF
-	TTF_Font*       font = nullptr;
-    SDL_Surface*    atlas = nullptr;
-    glyph_t         glyphs[256]{};
 
 	font = TTF_OpenFont( fontname.c_str(), pFont->size );
 	if ( !font )
@@ -525,7 +481,6 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
         TTF_CloseFont( font );
         font = nullptr;
     }
-#endif
 }
 
 void Gwen::Renderer::OpenGL::FreeFont(Gwen::Font *pFont)
@@ -533,11 +488,9 @@ void Gwen::Renderer::OpenGL::FreeFont(Gwen::Font *pFont)
 	if ( !pFont || pFont->data == nullptr )
 		return;
 
-#if USE_SDL_TTF
 	static_cast<renderFont_t*>( pFont->data )->texture.Destroy();
 	std::free( pFont->data );
 	pFont->data = nullptr;
-#endif
 }
 
 void Gwen::Renderer::OpenGL::LoadTexture(Gwen::Texture *pTexture)
@@ -647,16 +600,19 @@ void Gwen::Renderer::OpenGL::CreateFrameBuffer(Gwen::FrameBuffer *pFrameBuffer)
 	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Create();
 
 	// create a 2d image
-	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->image.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, { pFrameBuffer->width, pFrameBuffer->height, 0 } );
+	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->renderImage.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, { pFrameBuffer->width, pFrameBuffer->height, 0 } );
 
 	// attach our texture to frame buffer
 	gl::FrameBuffer::attachament_t attachament{};
+	attachament.target = GL_TEXTURE_2D;
+	attachament.attachament = GL_COLOR_ATTACHMENT0; 
+	attachament.handle = static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->renderImage;
 
 	// destroy if failed
 	if( !static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Attach( &attachament, 0, 1 ) )
 	{
 		static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Destroy();
-		static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->image.Destroy();
+		static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->renderImage.Destroy();
 		delete static_cast<renderFrameBuffer_t*>( pFrameBuffer->data );
 	}
 }
@@ -666,26 +622,100 @@ void Gwen::Renderer::OpenGL::FreeFrameBuffer(Gwen::FrameBuffer *pFrameBuffer)
 	if ( !pFrameBuffer || !pFrameBuffer->data )
 		return;
 
+	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->renderImage.Destroy();
 	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Destroy();
-	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->image.Destroy();
 	delete static_cast<renderFrameBuffer_t*>( pFrameBuffer->data );
 }
 
-void Gwen::Renderer::OpenGL::DrawFrameBuffer(Gwen::FrameBuffer *pFrameBuffer)
+void Gwen::Renderer::OpenGL::BindFrameBuffer(Gwen::FrameBuffer *pFrameBuffer, Gwen::Rect renderRect )
 {
 	if ( !pFrameBuffer || !pFrameBuffer->data )
 		return;
+	
+	// update the viewport
+	glViewport( renderRect.x, renderRect.y, renderRect.w, renderRect.h );
 
+	// bind the frame buffer 
 	m_pContext->BindFrameBuffer( static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer );
+	
+	// black alpha 
+	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
 
-	// TODO: the draw call here
+	// clear the buffer 
+	glClear( GL_COLOR_BUFFER_BIT );
+}
 
-	//
+void Gwen::Renderer::OpenGL::DrawFrameBuffer( Gwen::FrameBuffer *pFrameBuffer, Gwen::Rect targetRect )
+{	
+	bounds_t pos{};
+	bounds_t uv{};
 
-	// restore to defalt framebuffer
+	/// restore gui viewport size
+	glViewport( 0, 0, m_width, m_heigth );
+
+	/// restore defalt frame buffer
 	m_pContext->BindFrameBuffer( 0 );
 
-	// now we Draw as image
+	if ( !pFrameBuffer || !pFrameBuffer->data )
+	{
+		DrawMissingImage( targetRect );
+		return;
+	}
+
+	Translate( targetRect );
+
+	renderFrameBuffer_t *fbro = static_cast<renderFrameBuffer_t*>( pFrameBuffer->data ); 
+	
+#if 0
+	GLuint texture = fbro->renderImage;
+	GLuint sample = m_sample;
+
+	if ( m_mode != RECT_TEXTURED )
+	{
+		Flush();
+		m_pContext->BindTextures( &texture, &sample, 0, 1 );
+		m_mode = RECT_TEXTURED;
+	}
+	else
+	{
+		auto state = m_pContext->CurrentState();
+		if ( state.textures.textures[0] != texture )
+		{
+			Flush();
+			m_pContext->BindTextures( &texture, &sample, 0, 1 );
+		}
+	}
+
+	// Missing image, not loaded properly?
+	if ( texture == 0 )
+		return DrawMissingImage( targetRect );
+
+	// white base
+	glm::vec4 rgba { 1.0f, 1.0f, 1.0f, 1.0f };
+	m_uniformBuffer.Upload( glm::value_ptr( rgba ), 0, sizeof( glm::vec4 ) );
+
+
+	pos.left = targetRect.x;
+	pos.top = targetRect.y;
+	pos.right = targetRect.x + targetRect.w;
+	pos.bottom = targetRect.y + targetRect.h;	
+
+	uv.left = 0;
+	uv.right = 0;
+	uv.top = 1;
+	uv.bottom = 1;
+
+	AddQuad( pos, uv );
+#else
+	glBlitNamedFramebuffer( 
+		fbro->frameBuffer, 0, 
+		0, 0, pFrameBuffer->width, pFrameBuffer->height,
+		targetRect.x, targetRect.y, targetRect.x + targetRect.w, targetRect.y + targetRect.h,
+		GL_COLOR_BUFFER_BIT, GL_NEAREST );
+#endif
+
+	/// restore defalt frame buffer
+	m_pContext->BindFrameBuffer( 0 );
 
 }
 
@@ -806,100 +836,11 @@ void Gwen::Renderer::OpenGL::Flush( void )
 	m_vtail = m_vhead;
 }
 
-void Gwen::Renderer::OpenGL::CreateDebugFont(void)
-{
-#if !USE_SDL_TTF
-	gl::Image::dimensions_t dim{};
-	if ( m_fontImage )
-		return;
-
-	// Create the opengl texture
-	dim.width = 256;
-	dim.height = 256;
-	dim.depth = 0;
-
-	m_fontImage.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, dim );
-			
-	unsigned char* texdata = new unsigned char[256 * 256 * 4];
-	for ( int i = 0; i < 256 * 256; i++ )
-	{
-		texdata[i * 4] = sGwenFontData[i];
-		texdata[i * 4 + 1] = sGwenFontData[i];
-		texdata[i * 4 + 2] = sGwenFontData[i];
-		texdata[i * 4 + 3] = sGwenFontData[i];
-	}
-
-	m_fontImage.SubImage( 0, { 0, 0, 0}, { 256, 256, 0 }, texdata, false );
-	delete[]texdata;
-#endif
-}
-
-void Gwen::Renderer::OpenGL::DestroyDebugFont(void)
-{
-#if !USE_SDL_TTF
-	if ( !m_fontImage )
-			return;
-
-	m_fontImage.Destroy();
-#endif
-}
-
-bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
+void Gwen::Renderer::OpenGL::InitShaders(void)
 {
 	int len = 0;
-	int w = 0, h = 0;
-	GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 	char * sources = nullptr;
 	gl::Shader* shaders[2] { nullptr, nullptr };
-
-	if ( !pWindow )
-		return false;
-
-	m_pContext = new SDL3Context();
-	m_pContext->Create( pWindow->GetWindow() );
-
-#if USE_SDL_TTF
-	if( !TTF_Init() )
-		return false;
-#endif
-
-	SDL_GetWindowSizeInPixels( static_cast<SDL_Window*>( pWindow->GetWindow() ), &w, &h );
-
-	m_width = w;
-	m_heigth = h;
-
-	///
-	/// Create Vertex Array and configure vertex attributes 
-	///
-	gl::vertexAttrib_t	attrbs[2]
-	{
-		{ 0, 0, 2, GL_FLOAT, GL_FALSE, 0},
-		{ 1, 0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2 }
-	};
-
-	m_vertexArray.Create( attrbs, 2 );
-
-	///
-	/// Createa a white image whit size 16 x 16
-	///
-	uint16_t image[16 * 16 * 4];
-	gl::Image::dimensions_t dim{ 16, 16, 0 };
-	gl::Image::offsets_t	off{ 0, 0, 0};
-
-	// make a full white image
-	std::memset( image, 0xFF, 16 * 16 * 4 );
-
-	m_white.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, dim );
-	m_white.SubImage( 0, off, dim, image, false );
-
-	m_sample.Create();
-	m_sample.Parameteri( GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	m_sample.Parameteri( GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-
-	// we don't filter fonts 
-	m_fontSample.Create();
-	m_fontSample.Parameteri( GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	m_fontSample.Parameteri( GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 
 	///
 	/// Load Vertex Shader
@@ -940,66 +881,101 @@ bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
 	///
 	if( !m_program.Create( const_cast<const gl::Shader**>(shaders), 2 ) )
 		throw std::runtime_error("can't create program");
+}
+
+void Gwen::Renderer::OpenGL::InitBuffers(void)
+{
+	GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 
 	///
 	/// Create Vertex Buffer
-	///
 	m_vertexBuffer.Create( GL_ARRAY_BUFFER, k_VERTEX_SIZE * k_MAX_VERTICES_COUNT, nullptr, flags );
 	m_vertexes = static_cast<GLfloat*>( m_vertexBuffer.Map( 0, k_VERTEX_SIZE * k_MAX_VERTICES_COUNT, flags ) );
+
+	///
+	/// Create Index Buffer 
+	m_elementBuffer.Create( GL_ELEMENT_ARRAY_BUFFER, sizeof( uint16_t ) * k_MAX_ELEMENTS_COUNT, nullptr, flags );
+	m_elements = static_cast<uint16_t*>( m_elementBuffer.Map( 0, sizeof( uint16_t ) * k_MAX_ELEMENTS_COUNT, flags ) );
+
+	///
+	/// Create Uniform Block Buffer
+	m_uniformBuffer.Create( GL_UNIFORM_BUFFER, sizeof( float ) * 20, nullptr, GL_DYNAMIC_STORAGE_BIT );
+
+}
+
+void Gwen::Renderer::OpenGL::CreateSamplers(void)
+{
+	///
+	/// Createa a white image whit size 16 x 16
+	///
+	uint16_t image[16 * 16 * 4];
+	gl::Image::dimensions_t dim{ 16, 16, 0 };
+	gl::Image::offsets_t	off{ 0, 0, 0};
+
+	// make a full white image
+	std::memset( image, 0xFF, 16 * 16 * 4 );
+
+	m_white.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, dim );
+	m_white.SubImage( 0, off, dim, image, false );
+
+	m_sample.Create();
+	m_sample.Parameteri( GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	m_sample.Parameteri( GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+
+	// we don't filter fonts 
+	m_fontSample.Create();
+	m_fontSample.Parameteri( GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	m_fontSample.Parameteri( GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+}
+
+void Gwen::Renderer::OpenGL::CreateVertexArray(void)
+{
+	///
+	/// Create Vertex Array and configure vertex attributes 
+	///
+	gl::vertexAttrib_t	attrbs[2]
+	{
+		{ 0, 0, 2, GL_FLOAT, GL_FALSE, 0},
+		{ 1, 0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2 }
+	};
+
+	m_vertexArray.Create( attrbs, 2 );
 	
 	GLintptr offset = 0;
 	GLsizei stride = k_VERTEX_SIZE;
 	GLuint vbo = m_vertexBuffer;
 	m_vertexArray.BindeVertexBuffers( &vbo, &offset, &stride, 0, 1 );
-
-	///
-	/// Create Index Buffer 
-	///
-	m_elementBuffer.Create( GL_ELEMENT_ARRAY_BUFFER, sizeof( uint16_t ) * k_MAX_ELEMENTS_COUNT, nullptr, flags );
-	m_elements = static_cast<uint16_t*>( m_elementBuffer.Map( 0, sizeof( uint16_t ) * k_MAX_ELEMENTS_COUNT, flags ) );
 	m_vertexArray.BindElementBuffer( m_elementBuffer );
+}
 
-	///
-	/// Create Uniform Block Buffer
-	/// 
-	m_uniformBuffer.Create( GL_UNIFORM_BUFFER, sizeof( float ) * 20, nullptr, GL_DYNAMIC_STORAGE_BIT );
+bool Gwen::Renderer::OpenGL::InitializeContext( Gwen::WindowProvider* pWindow )
+{
+	int w = 0, h = 0;
+
+	if ( !pWindow )
+		return false;
+
+#if 0
+	m_pContext = new SDL3Context();
+	m_pContext->Create( pWindow->GetWindow() );
+
+	SDL_GetWindowSizeInPixels( static_cast<SDL_Window*>( pWindow->GetWindow() ), &w, &h );
+
+	m_width = w;
+	m_heigth = h;
+
+	Init();
+#endif
 	
 	/// set the ortographic projection matrix 
 	glm::mat4 projection = glm::ortho( 0.0f, static_cast<float>( m_width ), static_cast<float>( m_heigth ), 0.0f, -1.0f, 1.0f );
 	m_uniformBuffer.Upload( glm::value_ptr( projection ), sizeof( glm::vec4 ), sizeof( glm::mat4 ) );
-	
 	return true;
 }
 
 bool Gwen::Renderer::OpenGL::ShutdownContext( Gwen::WindowProvider* pWindow )
 {
-	if ( m_fontSample )
-		m_fontSample.Destroy();
-	
-	if( m_sample )
-		m_sample.Destroy();
-
-	if( m_white )
-		m_white.Destroy();
-
-	if ( m_uniformBuffer )
-		m_uniformBuffer.Destroy();	
-
-	if( m_elementBuffer )
-		m_elementBuffer.Destroy();
-
-	if( m_vertexBuffer )
-		m_vertexBuffer.Destroy();
-
-	if ( m_program )
-		m_program.Destroy();
-	
-	if( m_vertexArray )
-		m_vertexArray.Destroy();
-
-#if USE_SDL_TTF
-	TTF_Quit();
-#endif 
+	Release();
 
 	if( m_pContext )
 	{
@@ -1020,15 +996,14 @@ bool Gwen::Renderer::OpenGL::PresentContext( Gwen::WindowProvider* pWindow )
 
 bool Gwen::Renderer::OpenGL::ResizedContext( Gwen::WindowProvider* pWindow, int w, int h )
 {
-	if ( !pWindow )
-		return false;
-
-	SDL_GetWindowSizeInPixels( static_cast<SDL_Window*>( pWindow->GetWindow() ), &w, &h );
-
+	if ( pWindow )
+	{
+		SDL_GetWindowSizeInPixels( static_cast<SDL_Window*>( pWindow->GetWindow() ), &w, &h );
+	}
+	
 	m_width = w;
 	m_heigth = h;
 
-	glViewport( 0, 0, w, h );
 	glm::mat4 projection = glm::ortho( 0.0f, static_cast<float>( m_width ), static_cast<float>( m_heigth ), 0.0f, -1.0f, 1.0f );
 	m_uniformBuffer.Upload( glm::value_ptr( projection ), sizeof( glm::vec4 ), sizeof( glm::mat4 ) );
 	return true;
@@ -1036,9 +1011,6 @@ bool Gwen::Renderer::OpenGL::ResizedContext( Gwen::WindowProvider* pWindow, int 
 
 bool Gwen::Renderer::OpenGL::BeginContext( Gwen::WindowProvider* pWindow )
 {
-	glClearColor( 0.5f, 0.5f, 0.5f, 1.0f );
-	glViewport( 0, 0, m_width, m_heigth );
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	return true;
 }
 

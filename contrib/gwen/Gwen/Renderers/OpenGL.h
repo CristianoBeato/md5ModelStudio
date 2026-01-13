@@ -16,32 +16,15 @@ namespace Gwen
 {
 	namespace Renderer
 	{
-		class SDL3Context : public gl::Context
-		{
-		public:
-			SDL3Context( void );
-			~SDL3Context( void );
-
-			virtual bool    Create( const void* in_windowHandle) override ;
-			virtual void    Destroy( void ) override;
-			virtual bool    MakeCurrent( void ) override;
-			virtual bool    Release( void ) override;
-			virtual bool    SwapBuffers( void ) override;
-			virtual void*   GetFunctionPointer( const char* in_name ) const override;
-			virtual void    DebugOuput( const char* in_message ) const override;
-
-		private:
-			SDL_Window*     m_renderWindown;
-			SDL_GLContext   m_renderContext;
-		};
-
 		class OpenGL : public Gwen::Renderer::Base
 		{
 			public:
 				OpenGL( void );
+				OpenGL( gl::Context* in_pContext );
 				~OpenGL( void );
 
-				virtual void Init( void );
+				virtual void Init( void ) override;
+				virtual void Release( void ) override;
 
 				virtual void Begin( void ) override;
 				virtual void End( void ) override;
@@ -63,7 +46,9 @@ namespace Gwen
 				virtual void FreeTexture( Gwen::Texture* pTexture ) override;
 				virtual void CreateFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) override;
 				virtual void FreeFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) override;
-				virtual void DrawFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) override;
+				virtual void BindFrameBuffer( Gwen::FrameBuffer* pFrameBuffer, Gwen::Rect renderRect ) override;
+				virtual void DrawFrameBuffer( Gwen::FrameBuffer* pFrameBuffer, Gwen::Rect targetRect ) override;
+
 				Gwen::Color PixelColour( Gwen::Texture* pTexture, unsigned int x, unsigned int y, const Gwen::Color & col_default ) override;
 				Gwen::Point MeasureText( Gwen::Font* pFont, const Gwen::UnicodeString & text );
 
@@ -91,8 +76,6 @@ namespace Gwen
 				uint16_t			m_itail;
 				GLsizei				m_width;
 				GLsizei				m_heigth;
-				float				m_fLetterSpacing;
-				float				m_fFontScale[2];
 				gl::VertexArray		m_vertexArray;
 				gl::Program			m_program;
 				gl::Buffer			m_vertexBuffer;
@@ -107,8 +90,11 @@ namespace Gwen
 				
 				void	AddQuad( const bounds_t pos, const bounds_t uv );
 				void	Flush( void );
-				void	CreateDebugFont( void );
-				void	DestroyDebugFont( void );
+				
+				void	InitShaders( void );
+				void	InitBuffers( void );
+				void	CreateSamplers( void );
+				void	CreateVertexArray( void );
 
 			public:
 				//
@@ -121,6 +107,7 @@ namespace Gwen
 				virtual bool BeginContext( Gwen::WindowProvider* pWindow );
 				virtual bool EndContext( Gwen::WindowProvider* pWindow );
 
+				
 				gl::Context*	m_pContext;
 		};
 

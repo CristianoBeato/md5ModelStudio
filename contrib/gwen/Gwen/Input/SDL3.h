@@ -25,8 +25,7 @@ namespace Gwen
 		class SDL3
 		{
 			public:
-
-				SDL3()
+				SDL3( void )
 				{
 					m_Canvas = nullptr;
 				}
