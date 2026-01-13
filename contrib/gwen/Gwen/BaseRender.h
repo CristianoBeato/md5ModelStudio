@@ -43,6 +43,7 @@ namespace Gwen
 				virtual ~Base( void );
 
 				virtual void Init( void ) {};
+				virtual void Release( void ) {};
 
 				virtual void Begin( void ) {};
 				virtual void End( void ) {};
@@ -70,7 +71,8 @@ namespace Gwen
 // BEATO Begin:	Inplement a frame buffer utility to create render canvas
 				virtual void CreateFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) {};
 				virtual void FreeFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) {};
-				virtual void DrawFrameBuffer( Gwen::FrameBuffer* pFrameBuffer ) {};
+				virtual void BindFrameBuffer( Gwen::FrameBuffer* pFrameBuffer, Gwen::Rect renderRect ) {};
+				virtual void DrawFrameBuffer( Gwen::FrameBuffer* pFrameBuffer, Gwen::Rect targetRect ) {};
 // BEATO End
 
 				//

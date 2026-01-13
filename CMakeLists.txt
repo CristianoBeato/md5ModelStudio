@@ -17,8 +17,6 @@ include_directories( ${CMAKE_SOURCE_DIR}/contrib/gwen )
 add_subdirectory( contrib/gwen )
 add_subdirectory( contrib/crglLib )
 
-
-
 set( MD5MESH_SOURCE 
     ${CMAKE_SOURCE_DIR}/md5Mesh/md5Anim.cpp
     ${CMAKE_SOURCE_DIR}/md5Mesh/md5Anim.hpp
@@ -30,17 +28,20 @@ set( MD5MESH_SOURCE
     ${CMAKE_SOURCE_DIR}/md5Mesh/md5Model.hpp
     )
 
+set( DIALOGS_SOURCES
+    ${CMAKE_SOURCE_DIR}/dialogs/MainDialog.cpp
+    ${CMAKE_SOURCE_DIR}/dialogs/MainDialog.hpp
+    )
+
 set( MAIN_SOURCES 
     ${CMAKE_SOURCE_DIR}/precompiled.hpp
     ${CMAKE_SOURCE_DIR}/main.cpp
     ${CMAKE_SOURCE_DIR}/main.hpp
-    ${CMAKE_SOURCE_DIR}/ViewPort.cpp
-    ${CMAKE_SOURCE_DIR}/ViewPort.hpp
     )
 
 set( SOURCES
-    ${CRGL_SOURCE}
     ${MD5MESH_SOURCE}
+    ${DIALOGS_SOURCES}
     ${MAIN_SOURCES}
     )
 

@@ -29,15 +29,16 @@
 #define __PRECOMPILED_H__
 
 #include <memory.h>
-#include <string>
+#include <cstdint>
 #include <cstdlib>
 #include <cstdarg>
 #include <cstdio>
-#include <cmath>
 #include <cstring>
+#include <cmath>
 #include <set>
 #include <list>
 #include <algorithm>
+#include <string>
 
 #include "Gwen/Macros.h"
 #include "Gwen/Config.h"
