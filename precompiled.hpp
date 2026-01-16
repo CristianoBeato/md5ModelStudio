@@ -51,5 +51,6 @@ struct SDL_ScopedLock
 #include "Gwen/Gwen.h"
 //#include "Image.hpp"
 #include "md5Mesh/md5Model.hpp"
+#include "dialogs/ViewStructures.hpp"
 
 #endif //__MAIN_PRECOMPILED_HPP__

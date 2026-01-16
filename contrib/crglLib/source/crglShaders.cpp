@@ -57,7 +57,7 @@ bool gl::Shader::Create( const GLenum in_stage,const GLchar *const* in_sources, 
         return false;
     }
 
-    return true;
+    return glIsShader( m_shader->shader ) == GL_TRUE;
 }
 
 void gl::Shader::Destroy( void )

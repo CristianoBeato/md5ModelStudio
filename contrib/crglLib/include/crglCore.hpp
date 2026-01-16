@@ -29,14 +29,10 @@ extern PFNGLGETINTEGER64VPROC                           glGetInteger64v;
 extern PFNGLISENABLEDPROC                               glIsEnabled;
 extern PFNGLDISABLEPROC                                 glDisable;
 extern PFNGLENABLEPROC                                  glEnable;
+extern PFNGLENABLEIPROC                                 glEnablei;
+extern PFNGLDISABLEIPROC                                glDisablei;
 extern PFNGLFINISHPROC                                  glFinish;
 extern PFNGLFLUSHPROC                                   glFlush;
-
-// blending
-extern PFNGLBLENDFUNCPROC                               glBlendFunc;
-extern PFNGLBLENDFUNCSEPARATEPROC                       glBlendFuncSeparate;
-extern PFNGLBLENDCOLORPROC                              glBlendColor;
-extern PFNGLBLENDEQUATIONPROC                           glBlendEquation;
 
 extern PFNGLGETERRORPROC                                glGetError;
 extern PFNGLGETSTRINGPROC                               glGetString;
@@ -46,25 +42,34 @@ extern PFNGLHINTPROC                                    glHint;
 extern PFNGLVIEWPORTPROC                                glViewport;
 extern PFNGLSCISSORPROC                                 glScissor;
 
-// clear buffer 
-extern PFNGLCLEARPROC                                   glClear;
 
 // color buffer 
 extern PFNGLCLEARCOLORPROC                              glClearColor;
 extern PFNGLCOLORMASKPROC                               glColorMask;
+extern PFNGLCLEARPROC                                   glClear;
+extern PFNGLBLENDFUNCSEPARATEPROC                       glBlendFuncSeparate;
 extern PFNGLLOGICOPPROC                                 glLogicOp;
+
+// GL_ARB_draw_buffers_blend
+extern PFNGLBLENDEQUATIONSEPARATEIPROC                  glBlendEquationSeparatei;
+extern PFNGLBLENDFUNCSEPARATEIPROC                      glBlendFuncSeparatei;
 
 // depth buffer
 extern PFNGLDEPTHRANGEPROC                              glDepthRange;
 extern PFNGLCLEARDEPTHPROC                              glClearDepth;
 extern PFNGLDEPTHMASKPROC                               glDepthMask;
 extern PFNGLDEPTHFUNCPROC                               glDepthFunc;
+extern PFNGLPOLYGONOFFSETPROC                           glPolygonOffset;
 
 // stencil buffer
 extern PFNGLCLEARSTENCILPROC                            glClearStencil;
 extern PFNGLSTENCILMASKPROC                             glStencilMask;
 extern PFNGLSTENCILFUNCPROC                             glStencilFunc;
 extern PFNGLSTENCILOPPROC                               glStencilOp;
+
+extern PFNGLSTENCILFUNCSEPARATEPROC                     glStencilFuncSeparate;
+extern PFNGLSTENCILOPSEPARATEPROC                       glStencilOpSeparate;
+extern PFNGLSTENCILMASKSEPARATEPROC                     glStencilMaskSeparate;
 
 // polygon 
 extern PFNGLLINEWIDTHPROC                               glLineWidth;
@@ -131,6 +136,7 @@ extern PFNGLVERTEXARRAYVERTEXBUFFERPROC                 glVertexArrayVertexBuffe
 extern PFNGLVERTEXARRAYVERTEXBUFFERSPROC                glVertexArrayVertexBuffers; 
 
 // shader 
+extern PFNGLISSHADERPROC                                glIsShader;
 extern PFNGLCREATESHADERPROC                            glCreateShader;
 extern PFNGLDELETESHADERPROC                            glDeleteShader;
 extern PFNGLSHADERSOURCEPROC                            glShaderSource;
@@ -152,11 +158,9 @@ extern PFNGLVALIDATEPROGRAMPROC                         glValidateProgram;
 extern PFNGLGETPROGRAMIVPROC                            glGetProgramiv;
 extern PFNGLGETPROGRAMINFOLOGPROC                       glGetProgramInfoLog;
 extern PFNGLUSEPROGRAMPROC                              glUseProgram;
-extern PFNGLGETUNIFORMLOCATIONPROC                      glGetUniformLocation;
 extern PFNGLUNIFORM1IPROC                               glUniform1i;
 extern PFNGLUNIFORM1IVPROC                              glUniform1iv;
 extern PFNGLUNIFORM1UIVPROC                             glUniform1uiv;
-extern PFNGLUNIFORMMATRIX4FVPROC                        glUniformMatrix4fv;
 
 // pipelines
 extern PFNGLBINDPROGRAMPIPELINEPROC                     glBindProgramPipeline;
@@ -170,7 +174,6 @@ extern PFNGLACTIVESHADERPROGRAMPROC                     glActiveShaderProgram;
 extern PFNGLPROGRAMUNIFORM1IPROC                        glProgramUniform1i;
 extern PFNGLPROGRAMUNIFORM1IVPROC                       glProgramUniform1iv;
 extern PFNGLPROGRAMUNIFORM1UIVPROC                      glProgramUniform1uiv;
-extern PFNGLPROGRAMUNIFORMMATRIX4FVPROC                 glProgramUniformMatrix4fv;
 
 // buffer
 extern PFNGLISBUFFERPROC                                glIsBuffer;
@@ -301,17 +304,25 @@ extern PFNGLDELETESYNCPROC                              glDeleteSync;
 extern PFNGLWAITSYNCPROC                                glWaitSync;
 extern PFNGLGETSYNCIVPROC                               glGetSynciv;
 
+// GL_ARB_viewport_array
+extern PFNGLVIEWPORTARRAYVPROC                          glViewportArrayv;
+extern PFNGLSCISSORARRAYVPROC                           glScissorArrayv;
+extern PFNGLVIEWPORTINDEXEDFPROC                        glViewportIndexedf;
+extern PFNGLDEPTHRANGEARRAYVPROC                        glDepthRangeArrayv;
+extern PFNGLDEPTHRANGEINDEXEDPROC                       glDepthRangeIndexed;
+
 typedef struct glCoreBuffer_t                           glCoreBuffer_t;
 typedef struct glCoreShader_t                           glCoreShader_t;
 typedef struct glCoreProgram_t                          glCoreProgram_t;
 typedef struct glCorePipeline_t                         glCorePipeline_t;
 typedef struct glCoreVertexArray_t                      glCoreVertexArray_t;
 typedef struct glCoreImage_t                            glCoreImage_t;
-typedef struct glCoreImageHandler_t                     glCoreImageHandler_t;
 typedef struct glCoreSampler_t                          glCoreSampler_t;
+typedef struct glCoreImageHandler_t                     glCoreImageHandler_t;                     
 typedef struct glCoreFramebuffer_t                      glCoreFramebuffer_t;
 typedef struct glCoreRenderbuffer_t                     glCoreRenderbuffer_t;
 
+#include "crglEnumerators.hpp"
 #include "crglFence.hpp"
 #include "crglBuffer.hpp"
 #include "crglShaders.hpp"
@@ -322,5 +333,9 @@ typedef struct glCoreRenderbuffer_t                     glCoreRenderbuffer_t;
 #include "crglImageHandler.hpp"
 #include "crglFrameBuffer.hpp"
 #include "crglContext.hpp"
+
+#ifdef USE_EGL_CONTEXT
+#include "creglContext.hpp"
+#endif // USE_EGL_CONTEXT
 
 #endif //!__CRGL_CORE_HPP__

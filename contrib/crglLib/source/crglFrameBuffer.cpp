@@ -65,7 +65,7 @@ bool gl::RenderBuffer::Create( const GLuint in_width, const GLuint in_height, co
 
 void gl::RenderBuffer::Destroy( void )
 {
-    if ( !m_renderBufferHandle )
+    if ( m_renderBufferHandle != nullptr )
         return;
 
     if ( m_renderBufferHandle->renderBuffer != 0 )
@@ -105,7 +105,7 @@ bool gl::FrameBuffer::Create( void )
     m_frameBufferHandle = static_cast<glCoreFramebuffer_t*>( std::malloc( sizeof( glCoreFramebuffer_t ) ) );
     glCreateFramebuffers( 1, &m_frameBufferHandle->frameBuffer );
 
-    return true;
+    return glIsFramebuffer( m_frameBufferHandle->frameBuffer );
 }
 
 void gl::FrameBuffer::Destroy( void )
@@ -167,11 +167,14 @@ void gl::FrameBuffer::Blit( const GLuint in_dstFrameBuffer, const rect_t in_srcR
         return;
     }
 
-    glBlitNamedFramebuffer( m_frameBufferHandle->frameBuffer, in_dstFrameBuffer,
+    glBlitNamedFramebuffer( 
+            m_frameBufferHandle->frameBuffer, 
+            in_dstFrameBuffer, 
             in_srcRec.X0, in_srcRec.Y0, in_srcRec.X1, in_srcRec.Y1,
             in_dstRect.X0, in_dstRect.Y0, in_dstRect.X1, in_dstRect.Y1, 
             in_mask, in_filter );  
 }
+
 
 GLuint gl::FrameBuffer::Handler(void) const
 {
