@@ -1,3 +1,6 @@
 [submodule "contrib/crglLib"]
 	path = contrib/crglLib
 	url = https://github.com/CristianoBeato/crglLib
+[submodule "contrib/fastgltf"]
+	path = contrib/fastgltf
+	url = https://github.com/spnda/fastgltf
