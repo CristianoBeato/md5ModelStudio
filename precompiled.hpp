@@ -19,28 +19,15 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <list>
 #include <memory>
 #include <stdexcept>
 
+#include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_video.h> // SDL_CreateWindow /
 #include <SDL3/SDL_timer.h> // SDL_GetTics
+#include <SDL3/SDL_thread.h> // SDL_CreateThread
 #include <SDL3/SDL_mutex.h> // SDL_Mutex
-
-// util
-struct SDL_ScopedLock
-{
-    SDL_Mutex* mutex;
-
-    SDL_ScopedLock( SDL_Mutex* &in_lock ) : mutex( in_lock )
-    {
-        SDL_LockMutex( mutex );
-    }
-
-    inline ~SDL_ScopedLock( void )
-    {
-        SDL_UnlockMutex( mutex );
-        mutex = nullptr;
-    }
-};
 
 // gl matematics
 #include <glm/glm.hpp>
@@ -48,9 +35,14 @@ struct SDL_ScopedLock
 #include <glm/gtc/type_ptr.hpp>
 
 #include "crglCore.hpp"
-#include "Gwen/Gwen.h"
+
+#include "framework/pointers.hpp"
+#include "framework/threads.hpp"
+#include "framework/tasks.hpp"
+
 //#include "Image.hpp"
 #include "md5Mesh/md5Model.hpp"
+#include "dialogs/MainDialog.hpp"
 #include "dialogs/ViewStructures.hpp"
 
 #endif //__MAIN_PRECOMPILED_HPP__

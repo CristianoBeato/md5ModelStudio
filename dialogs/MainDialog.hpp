@@ -10,6 +10,8 @@
 #include <SDL3/SDL_mutex.h>
 
 #include "Gwen/Input/SDL3.h"
+#include "Gwen/FrameBuffer.h"
+#include "Gwen/Texture.h"
 #include "Gwen/Gwen.h"
 #include "Gwen/Controls.h"
 
@@ -75,8 +77,16 @@ private:
 class crMainDialog : public Gwen::Controls::Base
 {
 public:
-    crMainDialog( gl::Context *in_pContext );
+    static crMainDialog* Get( void );
+
+    crMainDialog( void );
     ~crMainDialog( void );
+
+    /// @brief 
+    void    Create( void );
+
+    /// @brief Release 
+    void    Destroy( void );
 
     /// @brief handle user input events
     bool    Events( const SDL_Event &in_event );

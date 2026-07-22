@@ -4,3 +4,6 @@
 [submodule "contrib/fastgltf"]
 	path = contrib/fastgltf
 	url = https://github.com/spnda/fastgltf
+[submodule "contrib/SDL3pp"]
+	path = contrib/SDL3pp
+	url = https://github.com/CristianoBeato/SDL3PlusPlus.git

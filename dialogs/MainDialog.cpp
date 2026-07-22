@@ -176,12 +176,37 @@ void crViewPort::InitShader(void)
 {
 }
 
+crMainDialog* crMainDialog::Get(void)
+{
+    static crMainDialog gMainDialog;
+    return &gMainDialog;
+}
+
 /*
 ==========================
 crMainDialog::crMainDialog
 ==========================
 */
-crMainDialog::crMainDialog(gl::Context *in_pContext) : Gwen::Controls::Base(nullptr, "mainDialog")
+crMainDialog::crMainDialog(void) : Gwen::Controls::Base(nullptr, "mainDialog")
+{
+}
+
+
+/*
+==========================
+crMainDialog::~crMainDialog
+==========================
+*/
+crMainDialog::~crMainDialog( void )
+{   
+}
+
+/*
+==========================
+crMainDialog::Create
+==========================
+*/
+void crMainDialog::Create(void)
 {
     // Note: Order is important here. you need to create the WindowCanvas before
 	// you setup the skin - because the renderer won't be properly set up
@@ -189,7 +214,7 @@ crMainDialog::crMainDialog(gl::Context *in_pContext) : Gwen::Controls::Base(null
 	
     //
 	// Create the skin and renderer
-    m_renderer = new Gwen::Renderer::OpenGL( in_pContext );
+    m_renderer = new Gwen::Renderer::OpenGL( nullptr );
     m_renderer->Init();
     m_renderer->ResizedContext( nullptr, 800, 600 );
 
@@ -314,13 +339,12 @@ crMainDialog::crMainDialog(gl::Context *in_pContext) : Gwen::Controls::Base(null
     m_statusbar->SetText( "Welcome to MD5Studio" );
 }
 
-
 /*
 ==========================
-crMainDialog::~crMainDialog
+crMainDialog::Destroy
 ==========================
 */
-crMainDialog::~crMainDialog( void )
+void crMainDialog::Destroy(void)
 {
     if ( m_canvas )
     {
@@ -339,7 +363,7 @@ crMainDialog::~crMainDialog( void )
         m_renderer->Release();
         delete m_renderer;
         m_renderer = nullptr;
-    }    
+    } 
 }
 
 /*

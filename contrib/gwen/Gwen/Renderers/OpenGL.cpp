@@ -143,7 +143,8 @@ void Gwen::Renderer::OpenGL::Begin( void )
 	GLsizeiptr uboSizes = sizeof( float ) * 20;
 	m_pContext->BindUniformBuffers( &ubo, &uboOffset, &uboSizes, 0, 1 );
 
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	// glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFuncSeparate( GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
 	glEnable( GL_BLEND );
 	glDisable( GL_DEPTH_TEST );
 	
@@ -463,7 +464,7 @@ void Gwen::Renderer::OpenGL::LoadFont( Gwen::Font *pFont )
 
 	// create and upload texture
 	static_cast<renderFont_t*>( pFont->data )->texture = gl::Image();
-	static_cast<renderFont_t*>( pFont->data )->texture.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, { 512, 512, 0 });
+	static_cast<renderFont_t*>( pFont->data )->texture.Create( gl::texture::TEXTURE_2D, GL_RGBA8, 1, 1, { 512, 512, 0 });
 	static_cast<renderFont_t*>( pFont->data )->texture.SubImage( 0, { 0, 0, 0 }, { 512, 512, 0}, atlas->pixels );
 	static_cast<renderFont_t*>( pFont->data )->h = TTF_GetFontHeight( font );
 
@@ -569,7 +570,7 @@ void Gwen::Renderer::OpenGL::LoadTexture(Gwen::Texture *pTexture)
 	dim.width = image->w;
 	dim.height = image->h;
 
-	reinterpret_cast<gl::Image*>( pTexture->data )->Create( GL_TEXTURE_2D, internalFormat, 1, 1, dim );
+	reinterpret_cast<gl::Image*>( pTexture->data )->Create( gl::texture::TEXTURE_2D, internalFormat, 1, 1, dim );
 	reinterpret_cast<gl::Image*>( pTexture->data )->SubImage( 0, { 0, 0, 0}, dim,  image->pixels, false );
 
 	SDL_DestroySurface( image );
@@ -600,7 +601,7 @@ void Gwen::Renderer::OpenGL::CreateFrameBuffer(Gwen::FrameBuffer *pFrameBuffer)
 	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->frameBuffer.Create();
 
 	// create a 2d image
-	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->renderImage.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, { pFrameBuffer->width, pFrameBuffer->height, 0 } );
+	static_cast<renderFrameBuffer_t*>( pFrameBuffer->data )->renderImage.Create( gl::texture::TEXTURE_2D, GL_RGBA8, 1, 1, { pFrameBuffer->width, pFrameBuffer->height, 0 } );
 
 	// attach our texture to frame buffer
 	gl::FrameBuffer::attachament_t attachament{};
@@ -804,13 +805,13 @@ void Gwen::Renderer::OpenGL::AddQuad(const bounds_t pos, const bounds_t uv)
 	const uint16_t indexes[6]
 	{
 		// T1
-		baseVertex + 0, // TL
-		baseVertex + 1, // TR
-		baseVertex + 2, // BL
+		baseVertex + 0u, // TL
+		baseVertex + 1u, // TR
+		baseVertex + 2u, // BL
 		// T2
-		baseVertex + 1, // TR
-		baseVertex + 2, // BL
-		baseVertex + 3, // BR
+		baseVertex + 1u, // TR
+		baseVertex + 2u, // BL
+		baseVertex + 3u, // BR
 	};
 
 	// upload to buffers 
@@ -915,7 +916,7 @@ void Gwen::Renderer::OpenGL::CreateSamplers(void)
 	// make a full white image
 	std::memset( image, 0xFF, 16 * 16 * 4 );
 
-	m_white.Create( GL_TEXTURE_2D, GL_RGBA8, 1, 1, dim );
+	m_white.Create( gl::texture::TEXTURE_2D, GL_RGBA8, 1, 1, dim );
 	m_white.SubImage( 0, off, dim, image, false );
 
 	m_sample.Create();
